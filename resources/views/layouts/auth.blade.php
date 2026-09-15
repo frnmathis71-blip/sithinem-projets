@@ -1,3 +1,6 @@
-<x-layouts::auth.simple :title="$title ?? null">
-    {{ $slot }}
-</x-layouts::auth.simple>
+<x-restaurant-layout :title="$title ?? 'Connexion'">
+    <section class="panel auth-panel">
+        {{ $slot }}
+    </section>
+    @fluxScripts
+</x-restaurant-layout>

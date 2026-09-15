@@ -1,0 +1,6 @@
+<x-restaurant-layout title="Menus">
+<section id="carte" class="catalog-section"><div class="section-heading"><div><p class="eyebrow">LE BON ACCORD</p><h1>Nos menus</h1><p>Choisissez votre formule, puis les saveurs qui vous font envie.</p></div></div>
+@include('restaurant.catalog-navigation', ['type' => 'menu'])
+<div class="product-grid">@forelse($rules as $rule)<article class="product-card"><div class="product-content"><span class="eyebrow">FORMULE À PERSONNALISER</span><h2>{{ $rule->label() }}</h2>@if($rule->description)<p>{{ $rule->description }}</p>@endif<p>{{ $rule->categoryLabel() }}</p>@if(in_array('main', $rule->categories()))<p class="muted">Accompagnement au choix compris.</p>@elseif(in_array('chef_main', $rule->categories()))<p class="muted">Garniture du chef déjà incluse.</p>@endif<div class="product-bottom"><strong>{{ number_format($rule->price / 100, 2, ',', ' ') }} €</strong><a class="button small" href="{{ route('menus.show', $rule) }}">Choisir ce menu</a></div></div></article>
+@empty<div class="empty-state"><h2>Les menus se préparent</h2><p>Découvrez les produits à la carte en attendant nos prochaines formules.</p><a class="button" href="{{ route('menu') }}">Voir la carte</a></div>@endforelse</div></section>
+</x-restaurant-layout>

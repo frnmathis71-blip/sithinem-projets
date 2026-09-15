@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './restaurant.css';
 @import '../../vendor/livewire/flux/dist/flux.css';
 
 @source '../views';
