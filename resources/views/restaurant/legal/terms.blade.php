@@ -1,0 +1,11 @@
+<x-restaurant-layout title="Conditions générales d’utilisation">
+<article class="panel legal-page"><h1>Conditions générales d’utilisation</h1>
+@include('restaurant.legal.operator')
+<h2>Objet du service</h2><p>Sithinem permet de consulter la carte, composer un panier et réserver une commande à retirer au restaurant. Ces CGU encadrent l’utilisation du site ; elles ne remplacent pas les conditions de vente et informations précontractuelles à finaliser avant l’ouverture commerciale.</p>
+<h2>Compte et utilisation</h2><p>Vous devez fournir des coordonnées exactes, protéger vos accès et signaler toute utilisation non autorisée. Les commandes fictives, tentatives de fraude, automatisations abusives et atteintes au fonctionnement du service sont interdites.</p>
+<h2>Commandes et retrait</h2><p>Le panier ne réserve pas les articles ni le créneau. Le prix, les disponibilités et la capacité sont contrôlés lors de la confirmation. Une commande est enregistrée lorsque le site affiche sa confirmation et sa référence. Le paiement s’effectue sur place. Pour une modification, un retard ou une demande d’annulation, contactez le restaurant ; une demande n’entraîne pas automatiquement l’annulation de la commande.</p>
+<h2>Informations sur les produits</h2><p>Les illustrations peuvent être indicatives. Pour connaître les ingrédients ou allergènes, contactez le restaurant avant de commander. Les indications de démonstration ne constituent pas une offre commerciale réelle.</p>
+<h2>Disponibilité du site</h2><p>Le service peut être interrompu pour maintenance ou incident technique. L’exploitant s’efforce de corriger les erreurs signalées. Les présentes conditions ne limitent pas les droits impératifs des consommateurs.</p>
+<h2>Contenus et données personnelles</h2><p>La reproduction des contenus du site nécessite l’autorisation du titulaire des droits, sauf exception légale. Consultez la <a href="{{ route('privacy') }}">politique de confidentialité</a> pour les données personnelles et les cookies.</p>
+<h2>Contact et évolutions</h2><p>Les coordonnées de l’exploitant figurent en tête de page. Les CGU peuvent évoluer avec le service ; la version publiée est accessible à tout moment depuis le pied de page.</p></article>
+</x-restaurant-layout>

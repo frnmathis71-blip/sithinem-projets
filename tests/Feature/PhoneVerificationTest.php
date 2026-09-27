@@ -12,6 +12,7 @@ use Illuminate\Validation\ValidationException;
 use Psr\Log\LoggerInterface;
 
 beforeEach(function () {
+    config(['services.twilio.enabled' => true]);
     config(['services.twilio.simulate' => false]);
     Cache::flush();
     Http::preventStrayRequests();

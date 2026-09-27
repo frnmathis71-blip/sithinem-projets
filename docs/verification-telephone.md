@@ -1,3 +1,7 @@
+# État actuel
+
+La vérification est désactivée : `PHONE_VERIFICATION_ENABLED=false`. Le téléphone reste obligatoire pour commander. Pour réactiver le parcours SMS, passer cette valeur à `true` puis vider le cache de configuration.
+
 # VÃƒÂ©rification du tÃƒÂ©lÃƒÂ©phone par SMS
 
 Le panier reste accessible. La premiÃƒÂ¨re commande nÃƒÂ©cessite un tÃƒÂ©lÃƒÂ©phone vÃƒÂ©rifiÃƒÂ© via Twilio Verify. Les comptes existants doivent ÃƒÂ©galement vÃƒÂ©rifier leur numÃƒÂ©ro. Un changement de numÃƒÂ©ro conserve lÃ¢â‚¬â„¢ancien numÃƒÂ©ro vÃƒÂ©rifiÃƒÂ© jusquÃ¢â‚¬â„¢ÃƒÂ  validation du nouveau.

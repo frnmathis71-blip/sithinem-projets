@@ -1,0 +1,14 @@
+<x-restaurant-layout title="Confidentialité et données personnelles">
+<article class="panel legal-page"><h1>Confidentialité et données personnelles</h1><p>Cette page décrit les traitements de données du service de commande Sithinem.</p>
+@include('restaurant.legal.operator')
+<h2>Données et utilisation</h2>
+<p>Nous utilisons votre nom, prénom, adresse e-mail et numéro de téléphone pour gérer votre compte, enregistrer vos commandes et vous contacter pour le retrait. Les commandes comprennent les articles, montants, horaires, statuts et éventuelles instructions que vous renseignez. Ces traitements sont nécessaires à la préparation et à l’exécution de votre commande.</p>
+<p>Les mots de passe sont enregistrés sous une forme hachée. Les informations techniques de session, adresses IP et journaux de sécurité servent à protéger le service contre les abus, sur la base de l’intérêt légitime de l’exploitant. Les données comptables requises sont conservées au titre des obligations légales applicables.</p>
+<p>Le paiement est effectué sur place : ce site ne collecte pas de coordonnées de carte bancaire. Évitez d’inscrire des données sensibles dans le message libre ; contactez le restaurant pour toute question concernant une allergie.</p>
+<h2>Destinataires et prestataires</h2>
+<p>Les personnes habilitées du restaurant accèdent aux informations nécessaires à la préparation et au retrait. L’hébergeur assure le fonctionnement technique. Lorsque la vérification SMS est activée, Twilio traite votre numéro et les informations de vérification. En simulation locale, aucun SMS n’est envoyé. Le prestataire d’e-mail configuré peut traiter les messages de connexion et de récupération de compte.</p>
+<p>Selon les prestataires et régions d’hébergement retenus, des traitements peuvent avoir lieu hors de l’Espace économique européen. L’exploitant doit préciser les destinations et garanties applicables avant la mise en production.</p>
+<h2>Conservation</h2><p>{{ config('site.retention') ?: 'Les durées par catégorie (comptes, commandes, pièces comptables, journaux et sauvegardes) restent à définir par l’exploitant avant l’ouverture. Le service ne dispose pas encore d’une purge automatique générale.' }}</p>
+<h2>Vos droits</h2><p>Vous pouvez demander l’accès, la rectification, l’effacement, la limitation et, lorsque les conditions sont réunies, la portabilité de vos données ou vous opposer à certains traitements. Adressez votre demande au contact indiqué ci-dessus. Certaines données peuvent être conservées pour satisfaire une obligation légale. Vous pouvez introduire une réclamation auprès de la <a href="https://www.cnil.fr/fr/plaintes" rel="noopener noreferrer">CNIL</a>.</p>
+<h2>Cookies</h2><p>Les cookies de session et de sécurité assurent la connexion et le panier. Aucun outil publicitaire ou de mesure d’audience n’est actuellement activé. <a href="{{ route('cookies') }}">Consulter et modifier mes choix</a>.</p></article>
+</x-restaurant-layout>

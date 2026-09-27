@@ -20,6 +20,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Minishlink\WebPush\VAPID;
@@ -191,7 +192,7 @@ test('exact thirty minute cutoff uses seconds and Paris timezone', function () {
 });
 
 test('last place is consumed once and complete slot cannot be booked', function () {
-    $this->slot->update(['capacity_override' => 1]);
+    $this->slot->update(['amount_capacity_override' => 1300]);
     restaurantPlace($this);
     $description = app(SlotService::class)->describe($this->slot, RestaurantSetting::find(1));
     expect($description['count'])->toBe(1)->and($description['remaining'])->toBe(0)->and($description['status'])->toBe('Complet');
@@ -203,7 +204,7 @@ test('lowering capacity preserves eight existing orders and blocks the ninth', f
     foreach (range(1, 8) as $i) {
         restaurantPlace($this);
     }
-    $this->actingAs($this->admin)->patch(route('admin.slots.update', $this->slot), ['capacity_override' => 5, 'manually_closed' => 0])->assertSessionHasNoErrors();
+    $this->actingAs($this->admin)->patch(route('admin.slots.update', $this->slot), ['amount_capacity_override' => 5, 'manually_closed' => 0])->assertSessionHasNoErrors();
     expect(Order::where('status', 'preparing')->count())->toBe(8);
     $description = app(SlotService::class)->describe($this->slot->fresh(), RestaurantSetting::find(1));
     expect($description['remaining'])->toBe(0)->and($description['count'])->toBe(8);
@@ -211,12 +212,12 @@ test('lowering capacity preserves eight existing orders and blocks the ninth', f
 });
 
 test('default capacity follows settings but specific overrides are preserved', function () {
-    $this->slot->update(['capacity_override' => 8]);
-    $this->actingAs($this->admin)->patch(route('admin.settings'), ['default_capacity' => 3])->assertSessionHasNoErrors();
+    $this->slot->update(['amount_capacity_override' => 800]);
+    $this->actingAs($this->admin)->patch(route('admin.settings'), ['default_amount_capacity' => 3])->assertSessionHasNoErrors();
     $slots = app(SlotService::class)->forDate('2026-09-18');
-    expect($slots[0]['capacity'])->toBe(8)->and($slots[1]['capacity'])->toBe(3);
-    $this->actingAs($this->admin)->patch(route('admin.slots.update', $this->slot), ['capacity_override' => null, 'manually_closed' => 0]);
-    expect(app(SlotService::class)->describe($this->slot->fresh(), RestaurantSetting::find(1))['capacity'])->toBe(3);
+    expect($slots[0]['capacity'])->toBe(800)->and($slots[1]['capacity'])->toBe(300);
+    $this->actingAs($this->admin)->patch(route('admin.slots.update', $this->slot), ['amount_capacity_override' => null, 'manually_closed' => 0]);
+    expect(app(SlotService::class)->describe($this->slot->fresh(), RestaurantSetting::find(1))['capacity'])->toBe(300);
 });
 
 test('manual closure and reopening are enforced on the server', function () {
@@ -246,7 +247,7 @@ test('changed hours reject an old slot even when its row still exists', function
 });
 
 test('idempotency returns the same order even after the slot becomes full', function () {
-    $this->slot->update(['capacity_override' => 1]);
+    $this->slot->update(['amount_capacity_override' => 1300]);
     $key = (string) Str::uuid();
     $first = restaurantPlace($this, $key);
     $second = app(OrderService::class)->place($this->client, $this->slot->id, '0612345678', $key, []);
@@ -261,7 +262,7 @@ test('failed item validation rolls back the whole reservation', function () {
 });
 
 test('cancellation releases capacity and reactivation cannot overbook', function () {
-    $this->slot->update(['capacity_override' => 1]);
+    $this->slot->update(['amount_capacity_override' => 1300]);
     $order = restaurantPlace($this);
     app(OrderService::class)->changeStatus($order, $this->admin, 'cancelled');
     restaurantPlace($this);
@@ -308,7 +309,7 @@ test('offers must be valid both now and at pickup', function () {
 test('admin routes reject clients and unauthenticated users', function () {
     $this->get('/admin')->assertRedirect('/login');
     $this->actingAs($this->client)->get('/admin')->assertForbidden();
-    $this->patch(route('admin.slots.update', $this->slot), ['capacity_override' => 999, 'manually_closed' => 0])->assertForbidden();
+    $this->patch(route('admin.slots.update', $this->slot), ['amount_capacity_override' => 999, 'manually_closed' => 0])->assertForbidden();
     $this->post(route('admin.catalog.save', 'product'), ['name' => 'Pirate'])->assertForbidden();
 });
 
@@ -355,7 +356,7 @@ test('admin creates edits and archives products with integer cents', function ()
 });
 
 test('invalid capacities and reversed hours are rejected', function () {
-    $this->actingAs($this->admin)->patch(route('admin.settings'), ['default_capacity' => -1])->assertSessionHasErrors('default_capacity');
+    $this->actingAs($this->admin)->patch(route('admin.settings'), ['default_amount_capacity' => -1])->assertSessionHasErrors('default_amount_capacity');
     $this->post(route('admin.hours'), ['weekday' => 5, 'is_open' => 1, 'starts_at' => '23:00', 'ends_at' => '18:00'])->assertSessionHasErrors('ends_at');
 });
 
@@ -416,4 +417,55 @@ test('paid action is idempotent and refuses cancelled orders', function () {
     $other = restaurantPlace($this);
     app(OrderService::class)->changeStatus($other, $this->admin, 'cancelled');
     $this->post(route('admin.orders.paid', $other))->assertUnprocessable();
+});
+
+test('amount capacity admits many small orders but rejects a large order before the ceiling is reached', function () {
+    $this->slot->update(['amount_capacity_override' => 20000]);
+    $this->product->update(['price' => 500]);
+    $this->cart = ['product:'.$this->product->id => 1];
+    foreach (range(1, 20) as $i) {
+        restaurantPlace($this);
+    }
+    $description = app(SlotService::class)->describe($this->slot, RestaurantSetting::findOrFail(1), 10001);
+    expect($description['used'])->toBe(10000)->and($description['remaining'])->toBe(10000)->and($description['selectable'])->toBeFalse();
+    $this->product->update(['price' => 10001]);
+    expect(fn () => restaurantPlace($this))->toThrow(ValidationException::class);
+    $this->product->update(['price' => 10000]);
+    restaurantPlace($this);
+    expect(Order::count())->toBe(21);
+    expect(app(SlotService::class)->describe($this->slot, RestaurantSetting::findOrFail(1))['remaining'])->toBe(0);
+});
+
+test('cart and live availability consider its actual amount', function () {
+    $this->slot->update(['amount_capacity_override' => 1299]);
+    $this->actingAs($this->client)->withSession(['cart' => $this->cart]);
+    $this->get(route('cart', ['date' => '2026-09-18']))->assertOk()->assertSee('Capacité insuffisante pour votre panier');
+    $response = $this->getJson(route('slots', ['date' => '2026-09-18', 'total' => 1]))->assertOk();
+    expect($response->json('slots.0.selectable'))->toBeFalse();
+    $this->post(route('orders.store'), ['slot_id' => $this->slot->id, 'phone' => '0612345678', 'idempotency_key' => (string) Str::uuid()])->assertSessionHasErrors('slot_id');
+    expect(Order::count())->toBe(0);
+});
+
+test('capacity settings convert euros exactly and reject sub-cent precision', function () {
+    $this->actingAs($this->admin)->patch(route('admin.settings'), ['default_amount_capacity' => '123.45'])->assertSessionHasNoErrors();
+    expect(RestaurantSetting::findOrFail(1)->default_amount_capacity)->toBe(12345);
+    $this->patch(route('admin.slots.update', $this->slot), ['amount_capacity_override' => '12.34', 'manually_closed' => 0])->assertSessionHasNoErrors();
+    expect($this->slot->fresh()->amount_capacity_override)->toBe(1234);
+    $this->patch(route('admin.settings'), ['default_amount_capacity' => '12.345'])->assertSessionHasErrors('default_amount_capacity');
+    $this->get(route('admin.slots', ['date' => '2026-09-18']))->assertOk()->assertSee('Montant maximal par créneau')->assertSee('12,34');
+});
+
+test('customers can order and edit their phone without SMS when verification is disabled', function () {
+    config(['services.twilio.enabled' => false]);
+    Http::preventStrayRequests();
+    $this->client->forceFill(['phone' => null, 'phone_verified_at' => null])->save();
+    $this->actingAs($this->client)->withSession(['cart' => $this->cart])->get(route('cart'))->assertOk()->assertSee('Téléphone pour le retrait')->assertSee('Confirmer ma commande')->assertDontSee('Vérifier mon téléphone');
+    $this->post(route('orders.store'), ['slot_id' => $this->slot->id, 'phone' => '0612345678', 'idempotency_key' => (string) Str::uuid()])->assertSessionHasNoErrors();
+    expect(Order::count())->toBe(1)->and($this->client->fresh()->phone)->toBe('+33612345678')->and($this->client->fresh()->phone_verified_at)->toBeNull();
+    $this->patch(route('account.update'), ['name' => 'Client', 'phone' => '0677777777'])->assertSessionHasNoErrors();
+    expect($this->client->fresh()->phone)->toBe('+33677777777');
+    $this->get(route('phone.show'))->assertNotFound();
+    $this->post(route('phone.send'), ['phone' => '0612345678'])->assertNotFound();
+    $this->post(route('phone.check'), ['code' => '123456'])->assertNotFound();
+    Http::assertNothingSent();
 });

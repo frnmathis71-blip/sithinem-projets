@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable $date
  * @property string $starts_at
  * @property string $ends_at
- * @property int|null $capacity_override
+ * @property int|null $amount_capacity_override
  * @property bool $manually_closed
  */
 class TimeSlot extends Model
@@ -26,7 +26,7 @@ class TimeSlot extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['date' => 'immutable_date', 'capacity_override' => 'integer', 'manually_closed' => 'boolean'];
+        return ['date' => 'immutable_date', 'amount_capacity_override' => 'integer', 'manually_closed' => 'boolean'];
     }
 
     /** @return HasMany<Order, $this> */

@@ -13,11 +13,14 @@ class PhoneVerificationController extends Controller
 {
     public function show(): View
     {
+        abort_unless(config('services.twilio.enabled'), 404);
+
         return view('restaurant.verify-phone');
     }
 
     public function send(Request $request, PhoneVerificationService $verification): RedirectResponse
     {
+        abort_unless(config('services.twilio.enabled'), 404);
         $data = $request->validate(['phone' => 'required|string|max:30']);
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -31,6 +34,7 @@ class PhoneVerificationController extends Controller
 
     public function check(Request $request, PhoneVerificationService $verification): RedirectResponse
     {
+        abort_unless(config('services.twilio.enabled'), 404);
         $data = $request->validate(['code' => ['required', 'string', 'regex:/^[0-9]{4,10}$/D']]);
         $user = $request->user();
         abort_unless($user instanceof User, 401);

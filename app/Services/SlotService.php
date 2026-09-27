@@ -49,9 +49,9 @@ class SlotService
     }
 
     /** @return array<int, array<string, mixed>> */
-    public function forDate(string $date): array
+    public function forDate(string $date, int $orderTotal = 0): array
     {
-        return app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($date) {
+        return app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($date, $orderTotal) {
             $hours = $this->hours($date);
             if ($hours['open']) {
                 $start = CarbonImmutable::parse($date.' '.$hours['start'], $settings->timezone);
@@ -62,12 +62,12 @@ class SlotService
             }
 
             return TimeSlot::query()->whereDate('date', $date)->orderBy('starts_at')->get()
-                ->map(fn (TimeSlot $slot) => $this->describe($slot, $settings))->all();
+                ->map(fn (TimeSlot $slot) => $this->describe($slot, $settings, $orderTotal))->all();
         });
     }
 
     /** @return array<string, mixed> */
-    public function describe(TimeSlot $slot, RestaurantSetting $settings): array
+    public function describe(TimeSlot $slot, RestaurantSetting $settings, int $orderTotal = 0): array
     {
         $date = $slot->date->format('Y-m-d');
         $hours = $this->hours($date);
@@ -76,9 +76,10 @@ class SlotService
         $opening = CarbonImmutable::parse($date.' '.$hours['start'], $settings->timezone);
         $closing = CarbonImmutable::parse($date.' '.$hours['end'], $settings->timezone);
         $now = CarbonImmutable::now($settings->timezone);
-        $capacity = $slot->capacity_override ?? $settings->default_capacity;
+        $capacity = $slot->amount_capacity_override ?? $settings->default_amount_capacity;
         $count = $slot->orders()->where('status', '!=', 'cancelled')->count();
-        $remaining = max(0, $capacity - $count);
+        $used = (int) $slot->orders()->where('status', '!=', 'cancelled')->sum('total');
+        $remaining = max(0, $capacity - $used);
         $inside = $hours['open'] && $start->gte($opening) && $end->lte($closing)
             && $end->eq($start->addMinutes(self::DURATION))
             && ((int) $opening->diffInMinutes($start)) % self::DURATION === 0;
@@ -86,6 +87,7 @@ class SlotService
             $slot->manually_closed => 'Fermé manuellement',
             ! $inside => 'Restaurant fermé',
             $remaining === 0 => 'Complet',
+            $orderTotal > $remaining => 'Capacité insuffisante pour votre panier',
             $start->lt($now->addMinutes(self::LEAD_TIME)) => 'Délai insuffisant',
             $start->startOfDay()->gt($now->startOfDay()->addDays(self::HORIZON)) => 'Réservations non ouvertes',
             default => null,
@@ -97,6 +99,6 @@ class SlotService
             default => 'Disponible',
         };
 
-        return ['id' => $slot->id, 'date' => $date, 'start' => $start->format('H:i'), 'end' => $end->format('H:i'), 'capacity' => $capacity, 'capacity_override' => $slot->capacity_override, 'count' => $count, 'remaining' => $remaining, 'status' => $status, 'selectable' => $reason === null, 'reason' => $reason, 'manually_closed' => $slot->manually_closed];
+        return ['id' => $slot->id, 'date' => $date, 'start' => $start->format('H:i'), 'end' => $end->format('H:i'), 'capacity' => $capacity, 'capacity_override' => $slot->amount_capacity_override, 'used' => $used, 'count' => $count, 'remaining' => $remaining, 'status' => $status, 'selectable' => $reason === null, 'reason' => $reason, 'manually_closed' => $slot->manually_closed];
     }
 }

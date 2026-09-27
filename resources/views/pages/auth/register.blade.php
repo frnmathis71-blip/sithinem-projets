@@ -6,7 +6,7 @@
         <x-auth-session-status class="text-center" :status="session('status')" />
 
         <form method="POST" action="{{ route('register.store') }}" class="flex flex-col gap-6">
-            @csrf
+            @csrf <x-spam-trap />
             <flux:input name="first_name" label="Prénom" :value="old('first_name')" autocomplete="given-name" />
             <!-- Name -->
             <flux:input

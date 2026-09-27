@@ -267,3 +267,5 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
     }
     .restaurant :is(.button,.tab,.variant-card,.story-card-body,.product-card) { transform:none!important; }
 }
+
+.legal-page{max-width:900px;margin:auto;line-height:1.7}.legal-page h2{margin-top:1.5em}.cookie-banner{position:sticky;bottom:0;z-index:30;padding:18px clamp(16px,4vw,60px);background:#fffdf7;border-top:2px solid #263f32;box-shadow:0 -4px 20px #0001}.cookie-banner h2{font-size:1.1rem;margin:0}.cookie-banner p{max-width:900px;font-size:.9rem}.cookie-banner .inline-form{margin-bottom:10px}.site-footer nav{line-height:1.8}

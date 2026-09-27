@@ -50,6 +50,7 @@
     @if(!$admin && request()->routeIs('home', 'menu', 'menus.*', 'offers', 'cart', 'checkout'))@include('restaurant.menu-proposal')@endif
     {{ $slot }}
 </main>
-<footer class="site-footer"><a class="footer-brand" href="{{ route('home') }}">SITHINEM</a><p>Les saveurs d’Asie, à emporter.</p><p>Paiement sur place lors du retrait.</p><span>© {{ date('Y') }} Sithinem</span></footer>
+<footer class="site-footer"><a class="footer-brand" href="{{ route('home') }}">SITHINEM</a><p>Les saveurs d’Asie, à emporter.</p><p>Paiement sur place lors du retrait.</p><span>© {{ date('Y') }} Sithinem</span><nav aria-label="Informations légales"><a href="{{ route('privacy') }}">Confidentialité / RGPD</a> · <a href="{{ route('terms') }}">CGU</a> · <a href="{{ route('cookies') }}">Gérer les cookies</a></nav></footer>
+@include('restaurant.cookie-banner')
 </body>
 </html>

@@ -27,7 +27,7 @@ if (slotGrid) {
                 if (input.checked && !selectable) { input.checked = false; selectionLost = true; }
                 input.disabled = !selectable;
                 label.classList.toggle('unavailable', !selectable);
-                label.querySelector('[data-slot-label]').textContent = slot ? (slot.reason ?? (slot.remaining <= 3 ? `${slot.remaining} place${slot.remaining > 1 ? 's' : ''} restante${slot.remaining > 1 ? 's' : ''}` : 'Disponible')) : 'Indisponible';
+                label.querySelector('[data-slot-label]').textContent = slot ? (slot.reason ?? 'Disponible') : 'Indisponible';
             }
             document.querySelector('[data-slot-update]').textContent = selectionLost ? 'Ce créneau vient de devenir indisponible. Choisissez un autre horaire.' : 'Disponibilité mise à jour. Vérification finale à la validation.';
         } catch {

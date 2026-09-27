@@ -15,6 +15,7 @@ return [
     */
 
     'twilio' => [
+        'enabled' => (bool) env('PHONE_VERIFICATION_ENABLED', false),
         'simulate' => (bool) env('PHONE_VERIFICATION_SIMULATE', false),
         'account_sid' => env('TWILIO_ACCOUNT_SID'),
         'auth_token' => env('TWILIO_AUTH_TOKEN'),

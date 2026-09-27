@@ -115,7 +115,8 @@ class AdminController extends Controller
 
     public function saveSlot(Request $request, TimeSlot $slot, RestaurantLock $lock): RedirectResponse
     {
-        $data = $request->validate(['capacity_override' => 'nullable|integer|min:0|max:10000', 'manually_closed' => 'required|boolean']);
+        $data = $request->validate(['amount_capacity_override' => ['nullable', 'numeric', 'min:0', 'max:200000', 'regex:/^\d+(?:[.]\d{1,2})?$/D'], 'manually_closed' => 'required|boolean']);
+        $data['amount_capacity_override'] = isset($data['amount_capacity_override']) ? app(CatalogManagementService::class)->cents((string) $data['amount_capacity_override']) : null;
         $lock->run(fn () => $slot->update($data));
 
         return back()->with('success', 'Créneau mis à jour. Toutes les commandes existantes sont conservées.');
@@ -123,7 +124,8 @@ class AdminController extends Controller
 
     public function settings(Request $request, RestaurantLock $lock): RedirectResponse
     {
-        $data = $request->validate(['default_capacity' => 'required|integer|min:0|max:10000']);
+        $data = $request->validate(['default_amount_capacity' => ['required', 'numeric', 'min:0', 'max:200000', 'regex:/^\d+(?:[.]\d{1,2})?$/D']]);
+        $data['default_amount_capacity'] = app(CatalogManagementService::class)->cents((string) $data['default_amount_capacity']);
         $lock->run(fn (RestaurantSetting $settings) => $settings->update($data));
 
         return back()->with('success', 'Capacité par défaut mise à jour pour les créneaux sans personnalisation.');

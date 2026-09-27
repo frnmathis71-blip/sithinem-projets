@@ -95,7 +95,7 @@ class StoreController extends Controller
             $request->session()->put('checkout_key', (string) Str::uuid());
         }
 
-        return view('restaurant.cart', ['lines' => $lines, 'total' => $total, 'date' => $date, 'slots' => $date ? $slots->forDate($date) : [], 'settings' => $settings, 'bookingDates' => $bookingDates]);
+        return view('restaurant.cart', ['lines' => $lines, 'total' => $total, 'date' => $date, 'slots' => $date ? $slots->forDate($date, $total) : [], 'settings' => $settings, 'bookingDates' => $bookingDates]);
     }
 
     public function updateCart(Request $request, CatalogService $catalog): RedirectResponse
@@ -148,7 +148,7 @@ class StoreController extends Controller
     {
         $date = $this->date($request, RestaurantSetting::query()->findOrFail(1));
 
-        return response()->json(['slots' => $date && in_array($date, array_column($slots->bookingDates(RestaurantSetting::query()->findOrFail(1)), 'date'), true) ? $slots->forDate($date) : [], 'dates' => $slots->bookingDates(RestaurantSetting::query()->findOrFail(1))])->header('Cache-Control', 'no-store');
+        return response()->json(['slots' => $date && in_array($date, array_column($slots->bookingDates(RestaurantSetting::query()->findOrFail(1)), 'date'), true) ? $slots->forDate($date, $this->cartAmount($request)) : [], 'dates' => $slots->bookingDates(RestaurantSetting::query()->findOrFail(1))])->header('Cache-Control', 'no-store');
     }
 
     public function place(Request $request, OrderService $orders): RedirectResponse
@@ -192,6 +192,11 @@ class StoreController extends Controller
         $phone = empty($data['phone']) ? null : app(PhoneVerificationService::class)->normalize($data['phone']);
         unset($data['phone']);
         $user->forceFill($data)->save();
+        if (! config('services.twilio.enabled')) {
+            $user->forceFill(['phone' => $phone, 'pending_phone' => null, 'phone_verified_at' => $phone === $user->phone ? $user->phone_verified_at : null])->save();
+
+            return back()->with('success', 'Vos informations ont été enregistrées.');
+        }
         if ($phone !== $user->phone) {
             $user->forceFill(['pending_phone' => $phone])->save();
 
@@ -199,6 +204,20 @@ class StoreController extends Controller
         }
 
         return back()->with('success', 'Vos informations ont été enregistrées.');
+    }
+
+    private function cartAmount(Request $request): int
+    {
+        /** @var array<string, int> $cart */
+        $cart = $request->session()->get('cart', []);
+        if ($cart === []) {
+            return 0;
+        }
+        try {
+            return app(CatalogService::class)->quote($cart)['total'];
+        } catch (ValidationException) {
+            return PHP_INT_MAX;
+        }
     }
 
     private function date(Request $request, RestaurantSetting $settings): ?string

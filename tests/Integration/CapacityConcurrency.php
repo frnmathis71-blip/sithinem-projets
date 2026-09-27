@@ -59,7 +59,7 @@ try {
     $product = Product::create(['name' => 'Concurrency item', 'price' => 100, 'available' => true]);
     $slots = app(SlotService::class)->forDate('2026-09-18');
     $slot = TimeSlot::findOrFail($slots[0]['id']);
-    $slot->update(['capacity_override' => 1]);
+    $slot->update(['amount_capacity_override' => 100]);
 
     $start = function (string $mode) use ($schema, &$children): Process {
         $process = new Process([PHP_BINARY, __FILE__, 'child', $schema, $mode]);
@@ -103,13 +103,13 @@ try {
     }
     echo "PASS: two concurrent PostgreSQL clients, one last place, exactly one order.\n";
 
-    $slot->update(['capacity_override' => 2]);
+    $slot->update(['amount_capacity_override' => 200]);
     DB::beginTransaction();
     DB::table('restaurant_settings')->where('id', 1)->lockForUpdate()->first();
     $third = $start('book');
     $waitForLock($third);
     // Lowering below existing bookings must win over the waiting client.
-    $slot->update(['capacity_override' => 0]);
+    $slot->update(['amount_capacity_override' => 0]);
     DB::commit();
     $third->wait();
     if (! $third->isSuccessful() || ! str_contains($third->getOutput(), 'REJECTED') || Order::count() !== 1) {
@@ -117,7 +117,7 @@ try {
     }
     echo "PASS: concurrent capacity reduction retains the existing order and rejects the waiting booking.\n";
 
-    $slot->update(['capacity_override' => 2]);
+    $slot->update(['amount_capacity_override' => 200]);
     DB::beginTransaction();
     DB::table('restaurant_settings')->where('id', 1)->lockForUpdate()->first();
     $fourth = $start('book');

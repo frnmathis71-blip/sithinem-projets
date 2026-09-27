@@ -30,19 +30,22 @@ class OrderService
             }
             $user = User::query()->lockForUpdate()->findOrFail($user->id);
             $phone = app(PhoneVerificationService::class)->normalize($phone);
-            if (! $user->phone_verified_at || $user->phone !== $phone) {
+            if (config('services.twilio.enabled') && (! $user->phone_verified_at || $user->phone !== $phone)) {
                 throw ValidationException::withMessages(['phone' => 'Vérifiez votre numéro de téléphone avant de confirmer la commande.']);
             }
             $slot = TimeSlot::query()->lockForUpdate()->findOrFail($slotId);
-            $this->assertAvailable($slot, $settings);
             $pickup = CarbonImmutable::parse($slot->date->format('Y-m-d').' '.$slot->starts_at, $settings->timezone);
             $quote = app(CatalogService::class)->quote($cart, $pickup);
+            $this->assertAvailable($slot, $settings, $quote['total']);
             if ($expectedTotal !== null && $expectedTotal !== $quote['total']) {
                 throw ValidationException::withMessages(['cart' => 'Le tarif a changé. Consultez votre panier avant de confirmer à nouveau.']);
             }
             $order = Order::query()->create(['number' => 'SN-'.strtoupper((string) Str::ulid()), 'user_id' => $user->id, 'time_slot_id' => $slot->id, 'customer_name' => trim($user->first_name.' '.$user->name), 'phone' => $phone, 'total' => $quote['total'], 'status' => 'preparing', 'idempotency_key' => $key]);
             $order->update(['customer_message' => $customerMessage === '' ? null : $customerMessage]);
             $order->items()->createMany($quote['lines']);
+            if ($user->phone !== $phone) {
+                $user->forceFill(['phone' => $phone, 'phone_verified_at' => null, 'pending_phone' => null])->save();
+            }
             $this->history($order, $user, null, 'preparing');
             $outboxId = DB::table('notification_outbox')->insertGetId(['order_id' => $order->id, 'created_at' => now(), 'updated_at' => now()]);
             DB::afterCommit(static function () use ($outboxId): void {
@@ -71,16 +74,16 @@ class OrderService
                 throw ValidationException::withMessages(['status' => 'Ce changement de statut n’est pas autorisé.']);
             }
             if ($order->status === 'cancelled') {
-                $this->assertAvailable(TimeSlot::query()->lockForUpdate()->findOrFail($order->time_slot_id), $settings);
+                $this->assertAvailable(TimeSlot::query()->lockForUpdate()->findOrFail($order->time_slot_id), $settings, $order->total);
             }
             $this->history($order, $actor, $order->status, $status);
             $order->update(['status' => $status]);
         });
     }
 
-    private function assertAvailable(TimeSlot $slot, RestaurantSetting $settings): void
+    private function assertAvailable(TimeSlot $slot, RestaurantSetting $settings, int $orderTotal): void
     {
-        $availability = app(SlotService::class)->describe($slot, $settings);
+        $availability = app(SlotService::class)->describe($slot, $settings, $orderTotal);
         if (! $availability['selectable']) {
             throw ValidationException::withMessages(['slot_id' => 'Ce créneau n’est plus disponible : '.$availability['reason'].'. Choisissez un autre horaire.']);
         }
