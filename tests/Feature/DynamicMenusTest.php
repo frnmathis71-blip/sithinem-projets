@@ -112,7 +112,7 @@ test('checkout snapshots compositions and detects changed totals under the reser
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-18 15:00:00', 'UTC'));
     try {
         $cart = [$this->menus->key($this->selection, $this->rule->id) => 1];
-        $user = User::factory()->create();
+        $user = User::factory()->create(['phone' => '+33612345678', 'phone_verified_at' => now()]);
         $slot = app(SlotService::class)->forDate('2026-09-18')[0]['id'];
         $orders = app(OrderService::class);
         $this->rule->update(['price' => 2100]);

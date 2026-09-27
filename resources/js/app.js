@@ -4,8 +4,10 @@ const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content;
 
 const slotGrid = document.querySelector('[data-slots-url]');
 if (slotGrid) {
+    let refreshing = false;
     const refresh = async () => {
-        if (document.hidden) return;
+        if (document.hidden || refreshing) return;
+        refreshing = true;
         try {
             const response = await fetch(slotGrid.dataset.slotsUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' });
             if (!response.ok) throw new Error();
@@ -30,6 +32,8 @@ if (slotGrid) {
             document.querySelector('[data-slot-update]').textContent = selectionLost ? 'Ce créneau vient de devenir indisponible. Choisissez un autre horaire.' : 'Disponibilité mise à jour. Vérification finale à la validation.';
         } catch {
             document.querySelector('[data-slot-update]').textContent = 'Actualisation indisponible. La disponibilité sera vérifiée à la validation.';
+        } finally {
+            refreshing = false;
         }
     };
     setInterval(refresh, 20000);
@@ -42,8 +46,10 @@ document.querySelector('[data-checkout]')?.addEventListener('submit', event => {
 
 const feed = document.querySelector('[data-feed-url]');
 if (feed) {
+    let refreshing = false;
     const refresh = async () => {
-        if (document.hidden) return;
+        if (document.hidden || refreshing) return;
+        refreshing = true;
         try {
             const response = await fetch(feed.dataset.feedUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' });
             if (!response.ok) throw new Error();
@@ -57,6 +63,7 @@ if (feed) {
             const dateLabel = document.querySelector('[data-board-date]');
             if (dateLabel) dateLabel.textContent = data.date_label;
         } catch { feed.querySelector('[data-feed-message]').textContent = 'Actualisation interrompue. Rechargez la page pour consulter les commandes. '; }
+        finally { refreshing = false; }
     };
     refresh();
     setInterval(refresh, 10000);

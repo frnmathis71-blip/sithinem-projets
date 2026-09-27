@@ -27,7 +27,7 @@ use Minishlink\WebPush\WebPush;
 
 beforeEach(function () {
     CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-18 15:00:00', 'UTC'));
-    $this->client = User::factory()->create();
+    $this->client = User::factory()->create(['phone' => '+33612345678', 'phone_verified_at' => now()]);
     $this->admin = User::factory()->create(['role' => 'admin']);
     $this->product = Product::query()->create(['name' => 'Nems', 'price' => 650, 'available' => true]);
     $this->slots = app(SlotService::class)->forDate('2026-09-18');

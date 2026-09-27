@@ -22,7 +22,15 @@
 <textarea id="customer-message" name="customer_message" rows="4" maxlength="1000" aria-describedby="customer-message-help" placeholder="Ex. : sans oignons dans le plat de poulet. Précisez le plat concerné et toute allergie.">{{ old('customer_message') }}</textarea>
 <p id="customer-message-help" class="muted">Allergies, ingrédient à retirer ou autre précision · 1 000 caractères maximum.</p>
 @endauth
-@auth<label for="phone">Téléphone pour le retrait</label><input type="tel" name="phone" id="phone" autocomplete="tel" value="{{ old('phone', auth()->user()->phone) }}" required placeholder="06 12 34 56 78"><p class="payment-note">Paiement sur place lors du retrait.</p><button class="button full" @disabled(!collect($slots)->contains('selectable', true) || collect($lines)->contains('available', false))>Confirmer ma commande · {{ number_format($total / 100, 2, ',', ' ') }} €</button>@else<p>Connectez-vous pour confirmer votre commande. Votre panier sera conservé.</p><a href="{{ route('login') }}" class="button full">Me connecter</a><a href="{{ route('register') }}" class="text-button">Créer un compte</a>@endauth
+@auth
+@if(auth()->user()->phone_verified_at)
+<p>Téléphone vérifié : {{ auth()->user()->phone }} · <a href="{{ route('phone.show') }}">Modifier</a></p>
+<input type="hidden" name="phone" value="{{ auth()->user()->phone }}">
+<p class="payment-note">Paiement sur place lors du retrait.</p><button class="button full" @disabled(!collect($slots)->contains('selectable', true) || collect($lines)->contains('available', false))>Confirmer ma commande · {{ number_format($total / 100, 2, ',', ' ') }} €</button>
+@else
+<p>Vérifiez votre téléphone par SMS pour confirmer votre première commande. Votre panier sera conservé.</p><a class="button full" href="{{ route('phone.show') }}">Vérifier mon téléphone</a>
+@endif
+@else<p>Connectez-vous pour confirmer votre commande. Votre panier sera conservé.</p><a href="{{ route('login') }}" class="button full">Me connecter</a><a href="{{ route('register') }}" class="text-button">Créer un compte</a>@endauth
 </form></section></div>
 @endif
 </x-restaurant-layout>

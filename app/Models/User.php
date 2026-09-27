@@ -20,6 +20,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $name
  * @property string $email
  * @property string $role
+ * @property Carbon|null $phone_verified_at
+ * @property string|null $pending_phone
  * @property string|null $phone
  * @property string|null $first_name
  * @property Carbon|null $email_verified_at
@@ -47,6 +49,7 @@ class User extends Authenticatable implements PasskeyUser
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

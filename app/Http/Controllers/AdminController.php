@@ -12,6 +12,7 @@ use App\Models\TimeSlot;
 use App\Services\CatalogImageService;
 use App\Services\CatalogManagementService;
 use App\Services\CatalogService;
+use App\Services\OrderPrintingService;
 use App\Services\OrderService;
 use App\Services\RestaurantLock;
 use App\Services\SlotService;
@@ -52,7 +53,11 @@ class AdminController extends Controller
     {
         $board = $this->boardQuery($request);
 
-        return view('restaurant.admin.board', ['orders' => $board['query']->get(), 'date' => $board['date'], 'scope' => $board['scope'], 'pushConfigured' => (bool) config('restaurant.vapid.public_key')]);
+        return view('restaurant.admin.board', ['orders' => $board['query']->get(), 'date' => $board['date'], 'scope' => $board['scope'], 'pushConfigured' => (bool) config('restaurant.vapid.public_key'),
+            'printingConfigured' => app(OrderPrintingService::class)->configured(),
+            'printIssues' => DB::table('order_print_jobs')->whereIn('status', ['failed', 'uncertain'])->orderByDesc('id')->limit(20)->get(),
+            'printPending' => DB::table('order_print_jobs')->whereIn('status', ['pending', 'printing'])->count(),
+        ]);
     }
 
     /** @return array{query: Builder<Order>, date: string, scope: string} */

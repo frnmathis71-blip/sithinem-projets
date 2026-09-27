@@ -90,7 +90,7 @@ test('home ranks ordered units across variants and menus with chef fallback and 
         $service = app(FeaturedProductService::class);
         $all = fn () => Product::whereNull('parent_id')->get();
         expect($service->select($all())->pluck('id')->all())->toBe([$products['chef_main']->id]);
-        $user = User::factory()->create();
+        $user = User::factory()->create(['phone' => '+33612345678', 'phone_verified_at' => now()]);
         $slot = app(SlotService::class)->forDate('2026-09-18')[0]['id'];
         $order = fn ($cart) => app(OrderService::class)->place($user, $slot, '0612345678', (string) Str::uuid(), $cart);
         $order(['product:'.$products['starter']->id => 2]);

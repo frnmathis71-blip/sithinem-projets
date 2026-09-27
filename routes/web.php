@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DynamicMenuController;
+use App\Http\Controllers\OrderPrintController;
+use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\PushController;
 use App\Http\Controllers\StoreController;
 use App\Http\Middleware\RequireAdmin;
@@ -19,6 +21,9 @@ Route::post('/composer-mon-menu', [DynamicMenuController::class, 'add'])->block(
 Route::post('/panier/proposition', [DynamicMenuController::class, 'proposal'])->block()->middleware('throttle:60,1')->name('menus.proposal');
 Route::get('/creneaux', [StoreController::class, 'slots'])->middleware('throttle:120,1')->name('slots');
 Route::middleware('auth')->group(function () {
+    Route::get('/verifier-telephone', [PhoneVerificationController::class, 'show'])->name('phone.show');
+    Route::post('/verifier-telephone/envoi', [PhoneVerificationController::class, 'send'])->block()->middleware('throttle:20,1')->name('phone.send');
+    Route::post('/verifier-telephone', [PhoneVerificationController::class, 'check'])->block()->middleware('throttle:20,1')->name('phone.check');
     Route::get('/commande', [StoreController::class, 'cart'])->name('checkout');
     Route::post('/commandes', [StoreController::class, 'place'])->block()->middleware('throttle:20,1')->name('orders.store');
     Route::get('/mes-commandes', [StoreController::class, 'orders'])->name('orders.index');
@@ -36,6 +41,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RequireAdmin::class]
     Route::get('/statistiques', [AdminController::class, 'dashboard'])->name('statistics');
     Route::get('/commandes', [AdminController::class, 'orders'])->name('orders');
     Route::get('/commandes/flux', [AdminController::class, 'orderFeed'])->name('feed');
+    Route::get('/commandes/tickets', [OrderPrintController::class, 'today'])->name('orders.tickets');
+    Route::post('/commandes/imprimer', [OrderPrintController::class, 'enqueue'])->name('orders.print');
+    Route::post('/impression/{job}/relancer', [OrderPrintController::class, 'retry'])->whereNumber('job')->name('printing.retry');
+    Route::get('/commandes/{order}/ticket', [OrderPrintController::class, 'show'])->name('orders.ticket');
     Route::get('/commandes/{order}', [StoreController::class, 'show'])->name('orders.show');
     Route::patch('/commandes/{order}/statut', [AdminController::class, 'status'])->name('orders.status');
     Route::post('/commandes/{order}/encaissement', [AdminController::class, 'paid'])->name('orders.paid');

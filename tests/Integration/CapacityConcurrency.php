@@ -55,7 +55,7 @@ DB::statement('CREATE SCHEMA '.$schema);
 $children = [];
 try {
     Artisan::call('migrate', ['--force' => true]);
-    $user = User::factory()->create(['email' => 'concurrency@example.test']);
+    $user = User::factory()->create(['email' => 'concurrency@example.test', 'phone' => '+33612345678', 'phone_verified_at' => now()]);
     $product = Product::create(['name' => 'Concurrency item', 'price' => 100, 'available' => true]);
     $slots = app(SlotService::class)->forDate('2026-09-18');
     $slot = TimeSlot::findOrFail($slots[0]['id']);

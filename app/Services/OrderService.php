@@ -28,6 +28,11 @@ class OrderService
             if ($existing) {
                 return $existing;
             }
+            $user = User::query()->lockForUpdate()->findOrFail($user->id);
+            $phone = app(PhoneVerificationService::class)->normalize($phone);
+            if (! $user->phone_verified_at || $user->phone !== $phone) {
+                throw ValidationException::withMessages(['phone' => 'Vérifiez votre numéro de téléphone avant de confirmer la commande.']);
+            }
             $slot = TimeSlot::query()->lockForUpdate()->findOrFail($slotId);
             $this->assertAvailable($slot, $settings);
             $pickup = CarbonImmutable::parse($slot->date->format('Y-m-d').' '.$slot->starts_at, $settings->timezone);
@@ -38,7 +43,6 @@ class OrderService
             $order = Order::query()->create(['number' => 'SN-'.strtoupper((string) Str::ulid()), 'user_id' => $user->id, 'time_slot_id' => $slot->id, 'customer_name' => trim($user->first_name.' '.$user->name), 'phone' => $phone, 'total' => $quote['total'], 'status' => 'preparing', 'idempotency_key' => $key]);
             $order->update(['customer_message' => $customerMessage === '' ? null : $customerMessage]);
             $order->items()->createMany($quote['lines']);
-            $user->forceFill(['phone' => $phone])->save();
             $this->history($order, $user, null, 'preparing');
             $outboxId = DB::table('notification_outbox')->insertGetId(['order_id' => $order->id, 'created_at' => now(), 'updated_at' => now()]);
             DB::afterCommit(static function () use ($outboxId): void {

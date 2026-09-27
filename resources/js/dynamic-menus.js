@@ -1,4 +1,6 @@
-const money = cents => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(cents / 100);
+const currency = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+const money = cents => currency.format(cents / 100);
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const selection = document.querySelector('[data-formula-selection]');
 if (selection) {
@@ -13,6 +15,10 @@ if (selection) {
     const pair = selection.dataset.pair === '1';
     const selected = code => choices.find(choice => choice.dataset.formulaChoice === code && choice.checked && !choice.disabled);
     let index = 0;
+    let stepAnimation;
+    reducedMotion.addEventListener('change', () => {
+        if (reducedMotion.matches) stepAnimation?.cancel();
+    });
     const update = () => {
         if (screens.some(screen => screen.dataset.formulaStep === 'main')) {
             const main = options.find(p => p.id === Number(selected('main')?.value));
@@ -60,14 +66,15 @@ if (selection) {
         }
         const destination = Math.max(0, Math.min(screens.length - 1, index + direction));
         if (destination === index) return;
+        stepAnimation?.cancel();
         index = destination;
         update();
         const title = screens[index].querySelector('legend');
         title.focus({preventScroll: true});
-        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-            screens[index].animate([{opacity: 0, transform: 'translateX(' + (direction * 24) + 'px)'}, {opacity: 1, transform: 'translateX(0)'}], {duration: 200, easing: 'ease-out'});
+        if (!reducedMotion.matches) {
+            stepAnimation = screens[index].animate([{opacity: 0, transform: 'translateX(' + (direction * 16) + 'px)'}, {opacity: 1, transform: 'translateX(0)'}], {duration: 240, easing: 'cubic-bezier(.22, 1, .36, 1)'});
         }
-        if (title.getBoundingClientRect().top < 0) title.scrollIntoView({block: 'start', behavior: 'instant'});
+        if (title.getBoundingClientRect().top < 0) title.scrollIntoView({block: 'start', behavior: reducedMotion.matches ? 'instant' : 'smooth'});
     };
     selection.querySelectorAll('[data-choose-group]').forEach(button => button.addEventListener('click', () => {
         const enabled = [...button.closest('[data-product-group]').querySelectorAll('input')].filter(input => !input.disabled);
@@ -134,13 +141,14 @@ function chooseVariant(products, onChoose, showPrice, trigger) {
         const image = document.createElement('img');
         image.src = product.image_url; image.alt = product.has_photo ? product.name : 'Illustration — photo à venir';
         image.draggable = false;
+        image.decoding = 'async';
         const label = document.createElement('strong'); label.textContent = product.variant_name || product.name;
         button.append(image, label);
         if (showPrice) { const price = document.createElement('span'); price.textContent = money(product.price); button.append(price); }
         button.addEventListener('click', () => { dialog.close(); onChoose(product); });
         return button;
     }));
-    dialog.onclose = () => trigger?.focus();
+    dialog.onclose = () => trigger?.focus({preventScroll: true});
     dialog.querySelector('[data-variant-close]').onclick = () => dialog.close();
     dialog.showModal();
 }
@@ -154,6 +162,12 @@ if (catalogData) {
             if (form.dataset.chosen) return;
             const variants = products.filter(p => p.group_id === genericId);
             if (!variants.length) return;
+            // Let the current submission finish when no selection dialog is needed.
+            // requestSubmit() inside a submit handler is ignored by the browser.
+            if (variants.length === 1) {
+                form.elements.id.value = variants[0].id;
+                return;
+            }
             event.preventDefault();
             chooseVariant(variants, product => {
                 form.elements.id.value = product.id;

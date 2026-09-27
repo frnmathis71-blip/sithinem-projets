@@ -10,6 +10,7 @@ use App\Services\CatalogService;
 use App\Services\DynamicMenuService;
 use App\Services\FeaturedProductService;
 use App\Services\OrderService;
+use App\Services\PhoneVerificationService;
 use App\Services\SlotService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
@@ -186,7 +187,16 @@ class StoreController extends Controller
     public function saveAccount(Request $request): RedirectResponse
     {
         $data = $request->validate(['name' => 'required|string|max:255', 'first_name' => 'nullable|string|max:255', 'phone' => ['nullable', 'string', 'regex:/^\+?[0-9][0-9 .()\-]{7,24}$/']]);
-        $request->user()?->forceFill($data)->save();
+        $user = $request->user();
+        abort_unless($user !== null, 401);
+        $phone = empty($data['phone']) ? null : app(PhoneVerificationService::class)->normalize($data['phone']);
+        unset($data['phone']);
+        $user->forceFill($data)->save();
+        if ($phone !== $user->phone) {
+            $user->forceFill(['pending_phone' => $phone])->save();
+
+            return redirect()->route('phone.show')->with('success', 'Vos informations sont enregistrées. Vérifiez votre nouveau numéro pour l’utiliser.');
+        }
 
         return back()->with('success', 'Vos informations ont été enregistrées.');
     }
