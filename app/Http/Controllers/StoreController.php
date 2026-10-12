@@ -146,9 +146,11 @@ class StoreController extends Controller
 
     public function slots(Request $request, SlotService $slots): JsonResponse
     {
-        $date = $this->date($request, RestaurantSetting::query()->findOrFail(1));
+        $settings = RestaurantSetting::query()->findOrFail(1);
+        $date = $this->date($request, $settings);
+        $bookingDates = $slots->bookingDates($settings);
 
-        return response()->json(['slots' => $date && in_array($date, array_column($slots->bookingDates(RestaurantSetting::query()->findOrFail(1)), 'date'), true) ? $slots->forDate($date, $this->cartAmount($request)) : [], 'dates' => $slots->bookingDates(RestaurantSetting::query()->findOrFail(1))])->header('Cache-Control', 'no-store');
+        return response()->json(['slots' => $date && in_array($date, array_column($bookingDates, 'date'), true) ? $slots->forDate($date, $this->cartAmount($request)) : [], 'dates' => $bookingDates])->header('Cache-Control', 'no-store');
     }
 
     public function place(Request $request, OrderService $orders): RedirectResponse

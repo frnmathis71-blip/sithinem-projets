@@ -5,16 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\MenuRule;
 use App\Models\Product;
-use App\Services\CatalogManagementService;
+use App\Services\AdminOperations;
 use App\Services\CatalogService;
 use App\Services\DynamicMenuService;
-use App\Services\RestaurantLock;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class DynamicMenuController extends Controller
 {
@@ -111,16 +108,9 @@ class DynamicMenuController extends Controller
         return view('restaurant.admin.menu-rule', ['rule' => $rule ? MenuRule::query()->findOrFail($rule) : new MenuRule]);
     }
 
-    public function saveRule(Request $request, DynamicMenuService $menus, RestaurantLock $lock, CatalogManagementService $catalog, ?int $rule = null): RedirectResponse
+    public function saveRule(Request $request, ?int $rule = null): RedirectResponse
     {
-        $data = $request->validate(['name' => 'required|string|max:255', 'description' => 'nullable|string|max:5000', 'categories' => 'required|array|min:1|max:5', 'categories.*' => ['required', 'string', 'distinct', Rule::in(DynamicMenuService::CATEGORIES)], 'price' => ['required', 'regex:/^\d{1,5}([.,]\d{1,2})?$/'], 'available' => 'required|boolean', 'visible' => 'required|boolean', 'position' => 'required|integer|min:0|max:999']);
-        if (! $menus->validCategories($data['categories'])) {
-            throw ValidationException::withMessages(['categories' => 'Une formule propose soit un plat classique, soit un plat du chef, jamais les deux.']);
-        }
-        $lock->run(function () use ($data, $catalog, $menus, $rule) {
-            $entry = $rule ? MenuRule::query()->findOrFail($rule) : new MenuRule;
-            $entry->fill(['name' => $data['name'], 'description' => $data['description'] ?? null, 'category_key' => $menus->categoryKey($data['categories']), 'price' => $catalog->cents($data['price']), 'available' => $data['available'], 'visible' => $data['visible'], 'position' => $data['position'], 'version' => $entry->exists ? $entry->version + 1 : 1])->save();
-        });
+        app(AdminOperations::class)->saveRule($request, $rule);
 
         return redirect()->route('admin.menu-rules')->with('success', 'Formule enregistrée.');
     }

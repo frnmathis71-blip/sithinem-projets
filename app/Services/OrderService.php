@@ -18,19 +18,36 @@ class OrderService
     /** @param array<string, int> $cart */
     public function place(User $user, int $slotId, string $phone, string $key, array $cart, ?int $expectedTotal = null, ?string $customerMessage = null): Order
     {
+        return $this->placeOrder($user, $slotId, $phone, $key, $cart, $expectedTotal, $customerMessage);
+    }
+
+    /** @param array<string, int> $cart */
+    public function placeForStaff(User $actor, int $slotId, string $phone, string $key, array $cart, string $customerName, string $source, int $expectedTotal, ?string $customerMessage = null): Order
+    {
+        abort_unless($actor->role === 'admin', 403);
+        Validator::make(['customer_name' => $customerName, 'source' => $source], [
+            'customer_name' => 'required|string|max:255', 'source' => 'required|in:phone,counter',
+        ])->validate();
+
+        return $this->placeOrder($actor, $slotId, $phone, $key, $cart, $expectedTotal, $customerMessage, trim($customerName), $source);
+    }
+
+    /** @param array<string, int> $cart */
+    private function placeOrder(User $user, int $slotId, string $phone, string $key, array $cart, ?int $expectedTotal, ?string $customerMessage, ?string $customerName = null, string $source = 'online'): Order
+    {
         Validator::make(['phone' => $phone, 'key' => $key], ['phone' => ['required', 'string', 'regex:/^\+?[0-9][0-9 .()\-]{7,24}$/'], 'key' => 'required|uuid'])->validate();
 
         Validator::make(['customer_message' => $customerMessage], ['customer_message' => 'nullable|string|max:1000'])->validate();
         $customerMessage = trim($customerMessage ?? '');
 
-        return app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($user, $slotId, $phone, $key, $cart, $expectedTotal, $customerMessage) {
+        return app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($user, $slotId, $phone, $key, $cart, $expectedTotal, $customerMessage, $customerName, $source) {
             $existing = Order::query()->where('user_id', $user->id)->where('idempotency_key', $key)->first();
             if ($existing) {
                 return $existing;
             }
             $user = User::query()->lockForUpdate()->findOrFail($user->id);
             $phone = app(PhoneVerificationService::class)->normalize($phone);
-            if (config('services.twilio.enabled') && (! $user->phone_verified_at || $user->phone !== $phone)) {
+            if ($source === 'online' && config('services.twilio.enabled') && (! $user->phone_verified_at || $user->phone !== $phone)) {
                 throw ValidationException::withMessages(['phone' => 'Vérifiez votre numéro de téléphone avant de confirmer la commande.']);
             }
             $slot = TimeSlot::query()->lockForUpdate()->findOrFail($slotId);
@@ -40,10 +57,10 @@ class OrderService
             if ($expectedTotal !== null && $expectedTotal !== $quote['total']) {
                 throw ValidationException::withMessages(['cart' => 'Le tarif a changé. Consultez votre panier avant de confirmer à nouveau.']);
             }
-            $order = Order::query()->create(['number' => 'SN-'.strtoupper((string) Str::ulid()), 'user_id' => $user->id, 'time_slot_id' => $slot->id, 'customer_name' => trim($user->first_name.' '.$user->name), 'phone' => $phone, 'total' => $quote['total'], 'status' => 'preparing', 'idempotency_key' => $key]);
+            $order = Order::query()->create(['number' => 'SN-'.strtoupper((string) Str::ulid()), 'user_id' => $user->id, 'time_slot_id' => $slot->id, 'customer_name' => $customerName ?? trim($user->first_name.' '.$user->name), 'source' => $source, 'phone' => $phone, 'total' => $quote['total'], 'status' => 'preparing', 'idempotency_key' => $key]);
             $order->update(['customer_message' => $customerMessage === '' ? null : $customerMessage]);
             $order->items()->createMany($quote['lines']);
-            if ($user->phone !== $phone) {
+            if ($source === 'online' && $user->phone !== $phone) {
                 $user->forceFill(['phone' => $phone, 'phone_verified_at' => null, 'pending_phone' => null])->save();
             }
             $this->history($order, $user, null, 'preparing');

@@ -6,6 +6,7 @@ use App\Http\Controllers\OrderPrintController;
 use App\Http\Controllers\PhoneVerificationController;
 use App\Http\Controllers\PushController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\StaffOrderController;
 use App\Http\Controllers\StoreController;
 use App\Http\Middleware\RequireAdmin;
 use Illuminate\Support\Facades\Route;
@@ -56,6 +57,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RequireAdmin::class]
     Route::get('/statistiques', [AdminController::class, 'dashboard'])->name('statistics');
     Route::get('/commandes', [AdminController::class, 'orders'])->name('orders');
     Route::get('/commandes/flux', [AdminController::class, 'orderFeed'])->name('feed');
+    Route::get('/commandes/nouvelle', [StaffOrderController::class, 'create'])->name('orders.create');
+    Route::post('/commandes', [StaffOrderController::class, 'store'])->block()->middleware('throttle:30,1')->name('orders.store');
     Route::get('/commandes/tickets', [OrderPrintController::class, 'today'])->name('orders.tickets');
     Route::post('/commandes/imprimer', [OrderPrintController::class, 'enqueue'])->name('orders.print');
     Route::post('/impression/{job}/relancer', [OrderPrintController::class, 'retry'])->whereNumber('job')->name('printing.retry');

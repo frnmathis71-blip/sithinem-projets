@@ -34,8 +34,9 @@ class CatalogService
             throw ValidationException::withMessages(['cart' => 'La composition de « '.$item->name.' » est indisponible.']);
         }
         $composition = [];
+        $products = Product::withTrashed()->with('parent')->whereIn('id', $rows->pluck('product_id'))->get()->keyBy('id');
         foreach ($rows as $row) {
-            $product = Product::withTrashed()->whereKey($row->product_id)->first();
+            $product = $products->get($row->product_id);
             if ($validate && (! $product || ! $this->productAvailable($product, $item instanceof Offer))) {
                 throw ValidationException::withMessages(['cart' => 'Un produit de « '.$item->name.' » est indisponible.']);
             }

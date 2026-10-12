@@ -2,6 +2,7 @@
 <a class="panel rush-order {{ $order->status === 'preparing' ? 'preparing' : '' }}" style="--order-accent: {{ $order->accent() }}" data-order="{{ $order->id }}" href="{{ route('admin.orders.show', $order) }}">
 <div class="section-heading"><strong class="pickup-clock">{{ substr($order->slot->starts_at, 0, 5) }}</strong><span class="badge">{{ \App\Models\Order::STATUSES[$order->status] }}</span></div>
 <h2>#{{ $order->id }} · {{ $order->customer_name }}</h2>
+<span class="badge">{{ ['phone' => 'Téléphone', 'counter' => 'Comptoir'][$order->source] ?? 'Site internet' }}</span>
 @include('restaurant.customer-message')
 <ul>
 @foreach($order->items as $item)

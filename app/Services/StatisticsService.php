@@ -17,9 +17,10 @@ class StatisticsService
             $elapsed = $start->diffInSeconds($now);
             $previousEnd = $previousStart->addSeconds($elapsed)->min($start);
             $current = $this->query($start, $now);
-            $revenue = (int) (clone $current)->sum('total');
+            $totals = $this->totals($current);
+            $revenue = $totals['value'];
             $previous = (int) $this->query($previousStart, $previousEnd)->sum('total');
-            $periods[] = ['label' => $label, 'revenue' => $revenue, 'count' => (clone $current)->count(), 'evolution' => $previous > 0 ? round(($revenue - $previous) / $previous * 100) : null];
+            $periods[] = ['label' => $label, 'revenue' => $revenue, 'count' => $totals['count'], 'evolution' => $previous > 0 ? round(($revenue - $previous) / $previous * 100) : null];
         }
         $today = Order::query()->whereHas('slot', fn (Builder $q) => $q->whereDate('date', $now->format('Y-m-d')))->where('status', '!=', 'cancelled');
         $units = 0;
@@ -31,10 +32,21 @@ class StatisticsService
         $chart = [];
         for ($i = 13; $i >= 0; $i--) {
             $day = $now->subDays($i)->startOfDay();
-            $chart[] = ['label' => $day->format('d/m'), 'value' => (int) $this->query($day, $day->endOfDay())->sum('total'), 'count' => $this->query($day, $day->endOfDay())->count()];
+            $chart[] = ['label' => $day->format('d/m'), ...$this->totals($this->query($day, $day->endOfDay()))];
         }
 
         return ['periods' => $periods, 'chart' => $chart, 'units' => $units, 'pending' => (clone $today)->where('status', 'preparing')->count(), 'completed' => (clone $today)->where('status', 'completed')->count(), 'cash' => (int) Order::query()->whereBetween('paid_at', [$now->startOfDay()->utc(), $now->endOfDay()->utc()])->sum('total')];
+    }
+
+    /**
+     * @param  Builder<Order>  $query
+     * @return array{value: int, count: int}
+     */
+    private function totals(Builder $query): array
+    {
+        $totals = $query->selectRaw('COALESCE(SUM(total), 0) as revenue, COUNT(*) as order_count')->toBase()->first();
+
+        return ['value' => (int) $totals->revenue, 'count' => (int) $totals->order_count];
     }
 
     /** @return Builder<Order> */

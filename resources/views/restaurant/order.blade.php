@@ -1,6 +1,7 @@
 @php($admin = request()->routeIs('admin.*'))
 <x-restaurant-layout :title="'Commande #'.$order->id" :admin="$admin">
 @include('restaurant.customer-message')
+@if($admin)<p class="badge">{{ ['phone' => 'Téléphone', 'counter' => 'Comptoir'][$order->source] ?? 'Site internet' }}</p>@endif
 <div class="section-heading"><div><p class="eyebrow">{{ $order->number }}</p><h1>Commande #{{ $order->id }}</h1></div><span class="badge">{{ \App\Models\Order::STATUSES[$order->status] }}</span></div>
 <div class="checkout-grid"><section class="panel"><h2>Votre sélection</h2>@foreach($order->items as $item)<div class="cart-row"><div><h3>{{ $item->quantity }} × {{ $item->name }}</h3>@if($item->item_type !== 'product')<p>@foreach($item->composition as $part){{ $part['quantity'] }} × {{ $part['name'] }}{{ !$loop->last ? ' · ' : '' }}@endforeach</p>@endif</div><strong>{{ number_format($item->quantity * $item->unit_price / 100, 2, ',', ' ') }} €</strong></div>@endforeach<div class="total-row"><span>Total</span><strong>{{ number_format($order->total / 100, 2, ',', ' ') }} €</strong></div><p class="payment-note">{{ $order->paid_at ? 'Paiement sur place enregistré.' : 'Paiement sur place lors du retrait.' }}</p></section>
 <section class="panel"><p class="eyebrow">RETRAIT AU RESTAURANT</p><h2>{{ $order->slot->date->format('d/m/Y') }} à {{ substr($order->slot->starts_at, 0, 5) }}</h2><p>{{ $order->customer_name }}<br><a href="tel:{{ preg_replace('/[^+0-9]/', '', $order->phone) }}">{{ $order->phone }}</a></p>

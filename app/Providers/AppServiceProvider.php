@@ -3,8 +3,11 @@
 namespace App\Providers;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -25,6 +28,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        // Named limiters keep the Windows application's counters apart from the website's.
+        RateLimiter::for('desktop-login', fn (Request $request) => [
+            Limit::perMinute(10)->by('ip:'.$request->ip()),
+            Limit::perMinute(5)->by('email:'.mb_strtolower((string) $request->input('email'))),
+        ]);
+        RateLimiter::for('desktop', fn (Request $request) => Limit::perMinute(600)->by('token:'.$request->attributes->get('desktop_token_id')));
         if (app()->isProduction() || config('site.force_https')) {
             URL::forceScheme('https');
             config(['session.secure' => true]);

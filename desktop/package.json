@@ -1,0 +1,71 @@
+{
+  "name": "sithinem-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gestion du restaurant Sithi Nem et des imprimantes Windows",
+  "author": "Sithi Nem",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "dist": "electron-builder --win nsis --x64",
+    "publish:site": "node scripts/publish-update.cjs"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "fr.sithinem.desktop",
+    "productName": "Sithi Nem",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "*.cjs",
+      "ui/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../scripts",
+        "to": "printer",
+        "filter": [
+          "Start-OrderPrinter.ps1",
+          "Print-Ticket.cs"
+        ]
+      },
+      {
+        "from": "printer",
+        "to": "printer",
+        "filter": [
+          "*.ps1"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "Sithi-Nem-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true,
+      "installerLanguages": [
+        "fr_FR"
+      ],
+      "language": "1036"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://mise-a-jour.invalid/logiciel/mises-a-jour"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  }
+}

@@ -46,27 +46,83 @@ document.querySelector('[data-checkout]')?.addEventListener('submit', event => {
 
 const feed = document.querySelector('[data-feed-url]');
 if (feed) {
+    const board = feed.querySelector('[data-board-orders]');
+    const seenOrders = new Set([...feed.querySelectorAll('[data-order]')].map(card => card.dataset.order));
+    const soundButton = document.querySelector('[data-order-sound]');
+    const soundStatus = document.querySelector('[data-order-sound-status]');
+    let audioContext;
+    let soundEnabled = false;
     let refreshing = false;
+    const chime = async () => {
+        await audioContext.resume();
+        if (audioContext.state !== 'running') throw new Error('Audio unavailable');
+        [660, 880, 1100].forEach((frequency, index) => {
+            const start = audioContext.currentTime + index * 0.18;
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.frequency.value = frequency;
+            gain.gain.setValueAtTime(0, start);
+            gain.gain.linearRampToValueAtTime(0.18, start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+            oscillator.start(start);
+            oscillator.stop(start + 0.32);
+            oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+        });
+    };
+    const disableSound = (message) => {
+        soundEnabled = false;
+        soundButton.setAttribute('aria-pressed', 'false');
+        soundButton.textContent = 'Activer le son';
+        soundStatus.textContent = message;
+    };
+    soundButton?.addEventListener('click', async () => {
+        if (soundEnabled) { disableSound('Alertes sonores désactivées.'); return; }
+        soundButton.disabled = true;
+        try {
+            audioContext ??= new AudioContext();
+            await chime();
+            soundEnabled = true;
+            soundButton.setAttribute('aria-pressed', 'true');
+            soundButton.textContent = 'Désactiver le son';
+            soundStatus.textContent = 'Son activé : une alerte retentira à chaque arrivée de nouvelles commandes.';
+        } catch { disableSound('Son indisponible. Vérifiez les autorisations audio du navigateur puis réessayez.'); }
+        finally { soundButton.disabled = false; }
+    });
     const refresh = async () => {
-        if (document.hidden || refreshing) return;
+        if (refreshing) return;
         refreshing = true;
         try {
-            const response = await fetch(feed.dataset.feedUrl, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+            const response = await fetch(feed.dataset.feedUrl, { headers: { Accept: 'application/json' }, cache: 'no-store', signal: AbortSignal.timeout(15000) });
             if (!response.ok) throw new Error();
             const data = await response.json();
-            feed.querySelector('[data-feed-message]').textContent = `${data.preparing} commande${data.preparing > 1 ? 's' : ''} en préparation. `;
-            const board = feed.querySelector('[data-board-orders]');
-            if (board && board.dataset.signature !== data.signature && !board.contains(document.activeElement)) {
-                board.innerHTML = data.html;
+            if (board && board.dataset.signature !== data.signature) {
+                const template = document.createElement('template');
+                template.innerHTML = data.html;
+                const ids = [...template.content.querySelectorAll('[data-order]')].map(card => card.dataset.order);
+                const hasNewOrders = ids.some(id => !seenOrders.has(id));
+                ids.forEach(id => seenOrders.add(id));
+                const focusedId = board.contains(document.activeElement) ? document.activeElement.closest('[data-order]')?.dataset.order : null;
+                board.replaceChildren(template.content);
                 board.dataset.signature = data.signature;
+                if (focusedId) {
+                    const replacement = [...board.querySelectorAll('[data-order]')].find(card => card.dataset.order === focusedId);
+                    replacement?.focus({ preventScroll: true });
+                }
+                if (hasNewOrders && soundEnabled) {
+                    chime().catch(() => disableSound('Cliquez sur « Activer le son » pour réactiver les alertes.'));
+                }
             }
+            feed.querySelector('[data-feed-message]').textContent = `${data.preparing} commande${data.preparing > 1 ? 's' : ''} en préparation. Actualisation automatique toutes les 3 secondes.`;
             const dateLabel = document.querySelector('[data-board-date]');
             if (dateLabel) dateLabel.textContent = data.date_label;
-        } catch { feed.querySelector('[data-feed-message]').textContent = 'Actualisation interrompue. Rechargez la page pour consulter les commandes. '; }
+        } catch { feed.querySelector('[data-feed-message]').textContent = 'Connexion interrompue. Nouvelle tentative automatique…'; }
         finally { refreshing = false; }
     };
     refresh();
-    setInterval(refresh, 10000);
+    setInterval(refresh, 3000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 }
 
 document.querySelector('[data-enable-push]')?.addEventListener('click', async event => {

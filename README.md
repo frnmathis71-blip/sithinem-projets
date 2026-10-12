@@ -1,5 +1,7 @@
 # Sithi Nem — commandes à emporter
 
+L’[application Windows et son installateur](docs/application-windows.md) permettent de gérer les commandes, saisir les commandes téléphone/comptoir et configurer l’impression des tickets depuis un poste Windows.
+
 Application Laravel 13 / Livewire 4 / Blade / Tailwind. Paiement exclusivement sur place. L’authentification Fortify du projet est conservée. L’administration nécessite le rôle `admin` ; les inscriptions créent uniquement des clients.
 
 ## Démarrer en local
@@ -45,8 +47,8 @@ Le [document de conception et de recette](docs/menus-personnalisables.md) décri
 - Vendredi et samedi, 18h00–23h00 initialement ; horaires modifiables et exceptions datées prioritaires.
 - Créneaux complets de 20 minutes, dernier départ à 22h40 pour une fermeture à 23h00.
 - Délai minimal de 30 minutes exactes, secondes incluses, dans le fuseau Europe/Paris. Réservations ouvertes sur 30 jours.
-- Capacité par défaut initiale : 10 commandes. Surcharge par créneau facultative ; zéro ferme les réservations ; champ vide rétablit l’héritage du réglage global.
-- Comptage de toutes les commandes non annulées, y compris celles déjà retirées. `restant = max(0, capacité − commandes)` ; seuil « presque complet » : 20 % restant, au moins une place.
+- Capacité exprimée en montant : plafond initial de 200 € par créneau. Surcharge par créneau facultative ; zéro ferme les réservations ; champ vide rétablit l’héritage du réglage global.
+- Toutes les commandes non annulées consomment leur montant total, y compris celles déjà retirées. `restant = max(0, plafond − montants réservés)` ; seuil « presque complet » : 20 % restant, au moins un centime. Le panier doit tenir entièrement dans le solde du créneau. Voir [les règles de capacité](docs/capacite-creneaux.md).
 - Capacité réduite, fermeture manuelle ou changement d’horaires : conservation de toutes les commandes, avec avertissement dans la gestion des créneaux.
 - Annuler libère la capacité. Réactiver doit respecter à nouveau toutes les conditions de réservation.
 
@@ -140,3 +142,5 @@ Sauvegarder PostgreSQL, les images et les secrets de configuration et tester la 
 - `routes/web.php` : routes et contrôles d’accès ; `php artisan route:list --except-vendor` pour les inspecter.
 
 Les plages de service actuelles sont limitées à une plage par jour, sans passage de minuit. Un restaurant ayant plusieurs services quotidiens nécessitera d’étendre le modèle d’horaires. La base utilise un restaurant unique.
+
+Le [guide du fonctionnement interne](docs/fonctionnement-interne.md) présente le parcours des données et les optimisations des lectures, sans changement de l’interface.

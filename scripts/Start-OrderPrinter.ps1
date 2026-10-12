@@ -2,7 +2,8 @@
     [Parameter(Mandatory = $true)][uri]$SiteUrl,
     [Parameter(Mandatory = $true)][string]$PrinterName,
     [ValidateSet(58, 80)][int]$WidthMm = 80,
-    [string]$Token = $env:RESTAURANT_PRINT_TOKEN
+    [string]$Token = $env:RESTAURANT_PRINT_TOKEN,
+    [switch]$ReportStatus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +40,7 @@ try {
                 Remove-Item -LiteralPath $pendingFile
             }
             $response = Invoke-RestMethod -Method Post -Uri "$apiBase/claim" -Headers $headers -TimeoutSec 30
+            if ($ReportStatus) { Write-Host 'SITHINEM_CONNECTED' }
             if ($null -eq $response.job) { Start-Sleep -Seconds 5; continue }
             $job = $response.job
             $pending = @{ site = $apiBase; id = $job.id; token = $job.token; success = $false; error = "Envoi interrompu. Vérifiez le ticket sur l'imprimante avant toute relance." }

@@ -1,5 +1,7 @@
 /.phpunit.cache
 /node_modules
+/desktop/node_modules
+/desktop/release
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot
@@ -22,3 +24,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Windows application updates are built locally and deployed separately (large files)
+/public/logiciel/

@@ -19,11 +19,15 @@ class SlotService
     public function bookingDates(RestaurantSetting $settings): array
     {
         $now = CarbonImmutable::now($settings->timezone);
+        $weeklyHours = DB::table('opening_hours')->get()->keyBy('weekday');
+        $exceptions = DB::table('opening_exceptions')
+            ->whereBetween('date', [$now->format('Y-m-d'), $now->addDays(self::HORIZON)->format('Y-m-d')])
+            ->get()->keyBy('date');
         $dates = [];
         for ($i = 0; $i <= self::HORIZON; $i++) {
             $day = $now->startOfDay()->addDays($i);
             $date = $day->format('Y-m-d');
-            $hours = $this->hours($date);
+            $hours = $this->formatHours($exceptions->get($date) ?? $weeklyHours->get($day->isoWeekday()));
             if (! $hours['open']) {
                 continue;
             }
@@ -45,6 +49,12 @@ class SlotService
         $row = DB::table('opening_exceptions')->where('date', $date)->first()
             ?? DB::table('opening_hours')->where('weekday', CarbonImmutable::parse($date)->isoWeekday())->first();
 
+        return $this->formatHours($row);
+    }
+
+    /** @return array{open: bool, start: string, end: string, reason: string} */
+    private function formatHours(?object $row): array
+    {
         return ['open' => (bool) ($row->is_open ?? false), 'start' => substr($row->starts_at ?? '18:00', 0, 5), 'end' => substr($row->ends_at ?? '23:00', 0, 5), 'reason' => $row->reason ?? ''];
     }
 
@@ -53,32 +63,53 @@ class SlotService
     {
         return app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($date, $orderTotal) {
             $hours = $this->hours($date);
+            $slots = TimeSlot::query()->whereDate('date', $date)->orderBy('starts_at')->get()->keyBy('starts_at');
             if ($hours['open']) {
                 $start = CarbonImmutable::parse($date.' '.$hours['start'], $settings->timezone);
                 $end = CarbonImmutable::parse($date.' '.$hours['end'], $settings->timezone);
                 for ($cursor = $start; $cursor->addMinutes(self::DURATION)->lte($end); $cursor = $cursor->addMinutes(self::DURATION)) {
-                    TimeSlot::query()->firstOrCreate(['date' => $date, 'starts_at' => $cursor->format('H:i:s')], ['ends_at' => $cursor->addMinutes(self::DURATION)->format('H:i:s')]);
+                    $time = $cursor->format('H:i:s');
+                    if (! $slots->has($time)) {
+                        $slots->put($time, TimeSlot::query()->firstOrCreate(['date' => $date, 'starts_at' => $time], ['ends_at' => $cursor->addMinutes(self::DURATION)->format('H:i:s')])->refresh());
+                    }
                 }
             }
 
-            return TimeSlot::query()->whereDate('date', $date)->orderBy('starts_at')->get()
-                ->map(fn (TimeSlot $slot) => $this->describe($slot, $settings, $orderTotal))->all();
+            $usage = DB::table('orders')->join('time_slots', 'time_slots.id', '=', 'orders.time_slot_id')
+                ->whereDate('time_slots.date', $date)->where('orders.status', '!=', 'cancelled')
+                ->selectRaw('orders.time_slot_id, COUNT(*) as order_count, SUM(orders.total) as used')
+                ->groupBy('orders.time_slot_id')->get()->keyBy('time_slot_id');
+
+            return $slots->sortKeys()->values()
+                ->map(fn (TimeSlot $slot) => $this->describeSnapshot($slot, $settings, $orderTotal, $hours,
+                    (int) ($usage->get($slot->id)->order_count ?? 0), (int) ($usage->get($slot->id)->used ?? 0)))->all();
         });
     }
 
     /** @return array<string, mixed> */
     public function describe(TimeSlot $slot, RestaurantSetting $settings, int $orderTotal = 0): array
     {
+        // Always read fresh usage for reservation and reactivation checks.
+        $usage = $slot->orders()->where('status', '!=', 'cancelled')
+            ->selectRaw('COUNT(*) as order_count, COALESCE(SUM(total), 0) as used')->toBase()->first();
+
+        return $this->describeSnapshot($slot, $settings, $orderTotal, $this->hours($slot->date->format('Y-m-d')),
+            (int) $usage->order_count, (int) $usage->used);
+    }
+
+    /**
+     * @param  array{open: bool, start: string, end: string, reason: string}  $hours
+     * @return array<string, mixed>
+     */
+    private function describeSnapshot(TimeSlot $slot, RestaurantSetting $settings, int $orderTotal, array $hours, int $count, int $used): array
+    {
         $date = $slot->date->format('Y-m-d');
-        $hours = $this->hours($date);
         $start = CarbonImmutable::parse($date.' '.$slot->starts_at, $settings->timezone);
         $end = CarbonImmutable::parse($date.' '.$slot->ends_at, $settings->timezone);
         $opening = CarbonImmutable::parse($date.' '.$hours['start'], $settings->timezone);
         $closing = CarbonImmutable::parse($date.' '.$hours['end'], $settings->timezone);
         $now = CarbonImmutable::now($settings->timezone);
         $capacity = $slot->amount_capacity_override ?? $settings->default_amount_capacity;
-        $count = $slot->orders()->where('status', '!=', 'cancelled')->count();
-        $used = (int) $slot->orders()->where('status', '!=', 'cancelled')->sum('total');
         $remaining = max(0, $capacity - $used);
         $inside = $hours['open'] && $start->gte($opening) && $end->lte($closing)
             && $end->eq($start->addMinutes(self::DURATION))
