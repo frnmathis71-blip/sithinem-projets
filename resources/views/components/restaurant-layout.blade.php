@@ -8,7 +8,10 @@
     <meta name="theme-color" content="#263f32">
     <meta name="description" content="Votre cuisine préférée à emporter. Choisissez vos plats et réservez votre heure de retrait chez Sithinem.">
     <title>{{ $title }} · Sithinem</title>
-    <link rel="icon" href="/images/sithinem-logo.png" type="image/png">
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="Sithinem">
     <link rel="manifest" href="/manifest.webmanifest">
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
