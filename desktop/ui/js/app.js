@@ -5,37 +5,73 @@ const NAV = [
 const root = document.getElementById('root');
 let watcher = null, known = null, audio = null;
 
+// Loud kitchen bell of about 1.8 s: two rising three-note phrases, square + triangle for a piercing tone,
+// through a compressor so the peaks stay loud without distorting.
 function chime() {
   try {
     audio = audio || new AudioContext();
-    for (const [index, frequency] of [880, 1175].entries()) {
-      const oscillator = audio.createOscillator(), gain = audio.createGain();
-      const start = audio.currentTime + index * 0.18;
-      oscillator.frequency.value = frequency; oscillator.connect(gain); gain.connect(audio.destination);
-      gain.gain.setValueAtTime(0.0001, start); gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02); gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
-      oscillator.start(start); oscillator.stop(start + 0.4);
-    }
+    if (audio.state === 'suspended') audio.resume();
+    const output = audio.createDynamicsCompressor();
+    output.threshold.value = -12; output.ratio.value = 6;
+    output.connect(audio.destination);
+    const notes = [988, 1319, 1760, 988, 1319, 1760];
+    notes.forEach((frequency, index) => {
+      const start = audio.currentTime + 0.05 + index * 0.3;
+      const gain = audio.createGain();
+      gain.connect(output);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.8, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + (index === notes.length - 1 ? 0.5 : 0.28));
+      for (const [type, level] of [['square', 0.35], ['triangle', 1]]) {
+        const oscillator = audio.createOscillator(), mix = audio.createGain();
+        oscillator.type = type; oscillator.frequency.value = frequency; mix.gain.value = level;
+        oscillator.connect(mix); mix.connect(gain);
+        oscillator.start(start); oscillator.stop(start + 0.55);
+      }
+    });
   } catch { /* Sound is a convenience; the badge and notification still show new orders. */ }
 }
+App.chime = chime;
 
-// Watches today's orders in the background so new online orders are announced on every screen.
-// The board feeds the same check while it shows today's orders, so the server is not polled twice.
-App.observeActive = (orders) => {
-  const ids = new Set(orders.map((order) => order.id));
-  const fresh = known ? orders.filter((order) => !known.has(order.id)) : [];
-  known = ids;
-  const badge = document.querySelector('[data-nav="orders"] .badge');
-  if (badge) { badge.textContent = orders.length || ''; badge.hidden = !orders.length; }
-  if (fresh.length && store('sound') !== false) chime();
-  for (const order of fresh) window.sithinem.notify({ title: 'Nouvelle commande #' + order.id, body: order.customer_name + ' · retrait ' + order.slot.start + ' · ' + money(order.total) });
-  return fresh.length > 0;
-};
+// Live feed: every 3 seconds, asks only for orders created since the last one seen, whatever their pickup day.
+// New orders ring, notify, are highlighted and refresh the board at once.
+App.fresh = new Map();
+App.live = { ok: null, at: null, error: '' };
+let watching = false, legacyFeed = false;
+// Sites not yet updated have no live feed: fall back to today's board and report its new orders.
+async function recentOrders() {
+  if (!legacyFeed) {
+    try { return await api('GET', '/orders/recent', { query: { after: known ?? '' } }); }
+    catch (error) { if (error.status !== 404) throw error; legacyFeed = true; }
+  }
+  const board = await api('GET', '/orders', { query: { view: 'active' } });
+  const latest = Math.max(0, ...board.orders.map((order) => order.id));
+  return { latest_id: latest, preparing_today: board.orders.length, orders: known === null ? [] : board.orders.filter((order) => order.id > known) };
+}
 async function watchOrders() {
-  if (App.boardWatching) return;
+  if (watching) return;
+  watching = true;
   try {
-    const board = await api('GET', '/orders', { query: { view: 'active' } });
-    if (App.observeActive(board.orders)) App.views.orders.changed?.();
-  } catch { /* The orders screen shows connection problems itself. */ }
+    const feed = await recentOrders();
+    const fresh = known === null ? [] : feed.orders;
+    known = Math.max(known ?? 0, feed.latest_id, ...feed.orders.map((order) => order.id));
+    App.live = { ok: true, at: new Date(), error: '' };
+    const badge = document.querySelector('[data-nav="orders"] .badge');
+    if (badge) { badge.textContent = feed.preparing_today || ''; badge.hidden = !feed.preparing_today; }
+    if (fresh.length) {
+      if (store('sound') !== false) chime();
+      for (const order of fresh) {
+        App.fresh.set(order.id, Date.now());
+        window.sithinem.notify({ title: 'Nouvelle commande #' + order.id, body: order.customer_name + ' · retrait ' + frenchDate(order.slot.date) + ' à ' + order.slot.start + ' · ' + money(order.total) });
+      }
+      App.views.orders.arrived?.(fresh);
+    }
+  } catch (error) {
+    App.live = { ok: false, at: App.live.at, error: error.message };
+  } finally {
+    watching = false;
+    App.views.orders.liveChanged?.();
+  }
 }
 
 function navigate(view, params = {}) {
@@ -51,7 +87,7 @@ function navigate(view, params = {}) {
   fill(main);
   main.scrollTop = 0;
   App.leave = App.views[view].render(main, params) || null;
-  document.title = App.views[view].title + ' · Sithi Nem';
+  document.title = App.views[view].title + ' · Sithinem';
 }
 App.navigate = navigate;
 App.refresh = () => navigate(App.current, App.params);
@@ -76,7 +112,7 @@ function shell() {
   const user = App.state.user || {};
   fill(root, h('div', { class: 'layout' },
     h('nav', { class: 'sidebar', 'aria-label': 'Navigation' },
-      h('div', { class: 'brand' }, h('strong', { text: 'SITHI NEM' }), h('span', { text: 'Poste restaurant' })),
+      h('div', { class: 'brand' }, h('img', { src: 'img/mark.png', alt: '' }), h('div', {}, h('strong', { text: 'Sithinem' }), h('span', { text: 'Poste restaurant' }))),
       h('ul', {}, NAV.map(([id, label], index) => h('li', {}, h('button', { type: 'button', class: 'nav-item' + (id === 'take-order' ? ' accent' : ''), dataset: { nav: id }, title: label + ' (Ctrl+' + (index + 1) + ')', onclick: () => navigate(id) },
         icon(id), h('span', { text: label }), id === 'orders' ? h('span', { class: 'badge', hidden: true }) : null)))),
       h('div', { class: 'sidebar-foot' },
@@ -84,15 +120,16 @@ function shell() {
         h('button', { type: 'button', class: 'nav-item small', onclick: () => window.sithinem.settings() }, icon('settings'), h('span', { text: 'Poste et imprimante' })),
         h('button', { type: 'button', class: 'nav-item small', onclick: async () => { if (await confirmBox('Se déconnecter de ce poste ? Les commandes ne seront plus affichées jusqu’à la prochaine connexion.', 'Se déconnecter')) { await window.sithinem.logout(); signedOut(); } } },
           icon('logout'), h('span', { text: user.first_name ? 'Déconnexion · ' + user.first_name : 'Déconnexion' })),
-        h('small', { class: 'version', text: 'Version ' + App.state.version })
+        h('div', { class: 'version' }, h('span', { text: 'Version ' + App.state.version }), h('button', { class: 'link small', type: 'button', onclick: () => window.sithinem.checkUpdate() }, 'Mises à jour'))
       )),
-    h('div', { class: 'workspace' }, h('div', { id: 'update' }), h('main', { id: 'main', tabindex: '-1' }))));
+    h('div', { class: 'workspace' }, h('div', { class: 'titlebar' }), h('div', { id: 'update' }), h('main', { id: 'main', tabindex: '-1' }))));
+  window.sithinem.titlebar('light');
   updateBanner();
   navigate(store('view') || 'orders');
   clearInterval(watcher);
   known = null;
   watchOrders();
-  watcher = setInterval(watchOrders, 5000);
+  watcher = setInterval(watchOrders, 3000);
 }
 
 function loginScreen(message) {
@@ -119,16 +156,18 @@ function loginScreen(message) {
     } catch (failure) { error.textContent = cleanError(failure); }
     finally { submit.disabled = false; }
   } },
-    h('p', { class: 'eyebrow', text: 'SITHI NEM · POSTE RESTAURANT' }), h('h1', { text: 'Connexion' }),
+    h('img', { class: 'login-logo', src: 'img/logo.png', alt: 'Sithinem Traiteur' }), h('h1', { text: 'Connexion' }),
     h('p', { class: 'muted', text: 'Connectez-vous avec votre compte administrateur du site ' + (App.state.siteUrl || '') + '.' }),
     field('Adresse e-mail', email), field('Mot de passe', password), codeField, error, submit,
     h('button', { class: 'link', type: 'button', onclick: () => window.sithinem.settings() }, 'Changer l’adresse du site ou l’imprimante'));
-  fill(root, h('div', { class: 'login' }, form));
+  window.sithinem.titlebar('dark');
+  fill(root, h('div', { class: 'login' }, h('div', { class: 'titlebar' }), form));
   email.focus();
 }
 
 function setupScreen() {
-  fill(root, h('div', { class: 'login' }, h('div', { class: 'login-card' }, h('p', { class: 'eyebrow', text: 'SITHI NEM · POSTE RESTAURANT' }), h('h1', { text: 'Bienvenue' }),
+  window.sithinem.titlebar('dark');
+  fill(root, h('div', { class: 'login' }, h('div', { class: 'titlebar' }), h('div', { class: 'login-card' }, h('img', { class: 'login-logo', src: 'img/logo.png', alt: 'Sithinem Traiteur' }), h('h1', { text: 'Bienvenue' }),
     h('p', { text: 'Indiquez d’abord l’adresse HTTPS de votre site dans les paramètres du poste. Vous pourrez ensuite vous connecter.' }),
     h('button', { class: 'button primary full', type: 'button', onclick: () => window.sithinem.settings() }, 'Ouvrir les paramètres du poste'))));
 }

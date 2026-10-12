@@ -48,26 +48,39 @@ async function openOrder(id, onChange) {
 registerView('orders', {
   title: 'Commandes',
   render(main, params) {
-    const state = { date: params.date || today(), view: params.view || 'active', slot: params.slot || '' };
-    let timer = null, signature = '', warned = false, shownHeading = '';
+    // Without an explicit date the board follows the current day, including after midnight.
+    const state = { date: params.date || today(), view: params.view || 'active', slot: params.slot || '', followToday: !params.date };
+    let timer = null, signature = '', shownHeading = '', boardError = '';
+    const incoming = [];
     const header = h('header', { class: 'view-head' });
+    const live = h('p', { class: 'live', role: 'status' });
+    const banners = h('div', { class: 'banners' });
     const board = h('div', { class: 'board' }, loading());
     const side = h('aside', { class: 'board-side' });
-    main.append(header, h('div', { class: 'board-layout' }, board, side));
+    main.append(header, banners, h('div', { class: 'board-layout' }, board, side));
+    const pick = (date) => { state.date = date; state.slot = ''; state.followToday = date === today(); load(true); };
     function controls(label) {
-      const date = h('input', { type: 'date', value: state.date, onchange: (event) => { if (event.target.value) { state.date = event.target.value; state.slot = ''; load(true); } } });
-      fill(header, 
-        h('div', {}, h('h1', { text: state.view === 'active' ? 'En préparation' : state.view === 'history' ? 'Historique' : 'Toutes les commandes' }), h('p', { class: 'muted capital', text: label || frenchDate(state.date) })),
+      const date = h('input', { type: 'date', value: state.date, onchange: (event) => { if (event.target.value) pick(event.target.value); } });
+      fill(header,
+        h('div', {}, h('h1', { text: state.view === 'active' ? 'En préparation' : state.view === 'history' ? 'Historique' : 'Toutes les commandes' }), h('p', { class: 'muted capital', text: label || frenchDate(state.date) }), live),
         h('div', { class: 'toolbar' },
-          h('div', { class: 'date-nav' }, h('button', { class: 'icon-button', type: 'button', 'aria-label': 'Jour précédent', onclick: () => { state.date = shiftDate(state.date, -1); state.slot = ''; load(true); } }, icon('left')), date,
-            h('button', { class: 'icon-button', type: 'button', 'aria-label': 'Jour suivant', onclick: () => { state.date = shiftDate(state.date, 1); state.slot = ''; load(true); } }, icon('right')),
-            state.date !== today() ? h('button', { class: 'button small', type: 'button', onclick: () => { state.date = today(); state.slot = ''; load(true); } }, 'Aujourd’hui') : null),
+          h('div', { class: 'date-nav' }, h('button', { class: 'icon-button', type: 'button', 'aria-label': 'Jour précédent', onclick: () => pick(shiftDate(state.date, -1)) }, icon('left')), date,
+            h('button', { class: 'icon-button', type: 'button', 'aria-label': 'Jour suivant', onclick: () => pick(shiftDate(state.date, 1)) }, icon('right')),
+            state.date !== today() ? h('button', { class: 'button small', type: 'button', onclick: () => pick(today()) }, 'Aujourd’hui') : null),
           segmented([{ value: 'active', label: 'En préparation' }, { value: 'history', label: 'Historique' }, { value: 'all', label: 'Toutes' }], state.view, (value) => { state.view = value; load(true); }),
           h('button', { class: 'button primary', type: 'button', onclick: () => App.navigate('take-order') }, icon('plus'), 'Nouvelle commande')));
+      showLive();
     }
+    function showLive() {
+      const problem = boardError || (App.live.ok === false ? App.live.error : '');
+      live.className = 'live' + (problem ? ' down' : '');
+      fill(live, h('span', { class: 'dot' }), problem ? 'Connexion perdue — nouvel essai automatique : ' + problem
+        : 'En direct' + (App.live.at ? ' · vérifié à ' + App.live.at.toLocaleTimeString('fr-FR') : ''));
+    }
+    const isFresh = (order) => Date.now() - (App.fresh.get(order.id) || 0) < 120000;
     function card(order) {
-      return h('button', { type: 'button', class: 'order-card ' + order.status, style: '--accent:' + order.accent, onclick: () => openOrder(order.id, () => load()) },
-        h('div', { class: 'order-card-top' }, h('strong', { class: 'clock', text: order.slot.start }), h('div', { class: 'pills' }, pill(order.status_label, statusKind(order.status)), order.paid ? pill('Encaissée', 'ok') : null)),
+      return h('button', { type: 'button', class: 'order-card ' + order.status + (isFresh(order) ? ' fresh' : ''), style: '--accent:' + order.accent, onclick: () => openOrder(order.id, () => load()) },
+        h('div', { class: 'order-card-top' }, h('strong', { class: 'clock', text: order.slot.start }), h('div', { class: 'pills' }, isFresh(order) ? pill('Nouvelle', 'new') : null, pill(order.status_label, statusKind(order.status)), order.paid ? pill('Encaissée', 'ok') : null)),
         h('div', { class: 'order-card-title' }, h('span', { class: 'order-id', text: '#' + order.id }), h('span', { class: 'customer', text: order.customer_name })),
         h('span', { class: 'source', text: order.source_label }),
         order.customer_message ? h('p', { class: 'message small', text: order.customer_message }) : null,
@@ -90,33 +103,51 @@ registerView('orders', {
         h('div', { class: 'metric' }, h('span', { text: 'Commandes affichées' }), h('strong', { class: 'num', text: data.orders.length })),
         h('div', { class: 'metric' }, h('span', { text: 'À encaisser' }), h('strong', { class: 'num', text: data.orders.filter((order) => !order.paid && order.status !== 'cancelled').length })),
         h('div', { class: 'metric' }, h('span', { text: 'Montant' }), h('strong', { class: 'num', text: money(totals) })),
-        check('Son pour les nouvelles commandes', { checked: store('sound') !== false, onchange: (event) => store('sound', event.target.checked) }));
+        check('Son pour les nouvelles commandes', { checked: store('sound') !== false, onchange: (event) => store('sound', event.target.checked) }),
+        h('button', { class: 'button small', type: 'button', onclick: () => App.chime() }, 'Tester le son'));
+    }
+    // New orders for another day than the one displayed are announced above the board.
+    function showBanners() {
+      fill(banners, incoming.map((order) => h('div', { class: 'live-banner' },
+        h('span', {}, h('strong', { text: 'Nouvelle commande #' + order.id }), ' · ' + order.customer_name + ' · retrait ' + frenchDate(order.slot.date) + ' à ' + order.slot.start + ' · ' + money(order.total)),
+        h('div', { class: 'row' }, h('button', { class: 'button small primary', type: 'button', onclick: () => { incoming.splice(incoming.indexOf(order), 1); showBanners(); state.view = 'active'; shownHeading = ''; pick(order.slot.date); } }, 'Afficher ce jour'),
+          h('button', { class: 'button small', type: 'button', onclick: () => openOrder(order.id, () => load()) }, 'Détail'),
+          h('button', { class: 'icon-button', type: 'button', 'aria-label': 'Masquer', onclick: () => { incoming.splice(incoming.indexOf(order), 1); showBanners(); } }, icon('close'))))));
     }
     async function load(reset = false) {
+      if (state.followToday && state.date !== today()) { state.date = today(); reset = true; }
       if (reset) { signature = ''; fill(board, loading()); }
       try {
         const data = await api('GET', '/orders', { query: { date: state.date, view: state.view, slot: state.slot } });
-        const feeds = data.date === today() && state.view === 'active' && !state.slot;
-        App.boardWatching = feeds;
-        if (feeds) App.observeActive(data.orders);
+        boardError = '';
         const heading = data.date_label + state.view;
         if (heading !== shownHeading) { shownHeading = heading; controls(data.date_label); }
-        warned = false;
-        const next = JSON.stringify(data);
+        showLive();
+        const next = JSON.stringify(data) + [...App.fresh.keys()].filter((id) => isFresh({ id })).join();
         if (next === signature) return;
         signature = next;
         fill(board, state.slot ? h('div', { class: 'notice' }, 'Commandes d’un seul créneau. ', h('button', { class: 'link', type: 'button', onclick: () => { state.slot = ''; load(true); } }, 'Afficher tous les créneaux')) : '',
           data.orders.length ? h('div', { class: 'order-grid' }, data.orders.map(card)) : empty(state.view === 'active' ? 'Tout est à jour' : 'Aucune commande', state.view === 'active' ? 'Aucune commande en préparation pour cette journée.' : 'Aucune commande dans cette vue pour cette journée.'));
         fill(side, summary(data), printing(data));
       } catch (error) {
+        boardError = error.message;
+        showLive();
         if (!signature) fill(board, failure(error, () => load(true)));
-        else if (!warned) { warned = true; toast('Actualisation impossible : ' + error.message, 'error'); }
       }
     }
     controls();
     load(true);
     timer = setInterval(() => load(), 4000);
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
     this.changed = () => load();
-    return () => { clearInterval(timer); this.changed = null; App.boardWatching = false; };
+    this.liveChanged = showLive;
+    this.arrived = (orders) => {
+      for (const order of orders) if (order.slot.date !== state.date || state.view === 'history') incoming.unshift(order);
+      incoming.splice(5);
+      showBanners();
+      load();
+    };
+    return () => { clearInterval(timer); window.removeEventListener('focus', onFocus); this.changed = this.liveChanged = this.arrived = null; };
   }
 });

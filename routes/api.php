@@ -24,6 +24,8 @@ Route::prefix('desktop')->name('desktop.')->group(function () {
         Route::post('/orders', [DesktopOrderController::class, 'store'])->name('orders.store');
         Route::post('/orders/print-today', [DesktopOrderController::class, 'printToday'])->name('orders.print');
         Route::post('/printing/{job}/retry', [DesktopOrderController::class, 'retryPrint'])->whereNumber('job')->name('printing.retry');
+        Route::get('/orders/recent', [DesktopOrderController::class, 'recent'])->name('orders.recent');
+        Route::get('/orders/recent', [DesktopOrderController::class, 'recent'])->name('orders.recent');
         Route::get('/orders/{order}', [DesktopOrderController::class, 'show'])->name('orders.show');
         Route::get('/orders/{order}/ticket', [DesktopOrderController::class, 'ticket'])->name('orders.ticket');
         Route::patch('/orders/{order}/status', [DesktopOrderController::class, 'status'])->name('orders.status');

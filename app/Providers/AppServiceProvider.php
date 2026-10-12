@@ -33,7 +33,8 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(10)->by('ip:'.$request->ip()),
             Limit::perMinute(5)->by('email:'.mb_strtolower((string) $request->input('email'))),
         ]);
-        RateLimiter::for('desktop', fn (Request $request) => Limit::perMinute(600)->by('token:'.$request->attributes->get('desktop_token_id')));
+        // Throttling runs before authentication, so each workstation is counted by its own bearer token.
+        RateLimiter::for('desktop', fn (Request $request) => Limit::perMinute(600)->by('token:'.hash('sha256', $request->bearerToken() ?? 'ip:'.$request->ip())));
         if (app()->isProduction() || config('site.force_https')) {
             URL::forceScheme('https');
             config(['session.secure' => true]);

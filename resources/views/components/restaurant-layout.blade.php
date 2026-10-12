@@ -17,7 +17,7 @@
 <a class="skip-link" href="#content">Aller au contenu</a>
 <div class="announcement">CUISINÉ AVEC CŒUR · À EMPORTER UNIQUEMENT · PAIEMENT AU RETRAIT</div>
 <header class="site-header">
-    <a href="{{ route('home') }}" class="brand" aria-label="Sithinem, accueil"><img src="{{ asset('images/sithinem-logo.png') }}" alt="Sithinem Traiteur" width="96" height="96" style="width: 96px; height: 96px; object-fit: contain;"></a>
+    <a href="{{ route('home') }}" class="brand" aria-label="Sithinem, accueil"><img class="brand-logo" src="{{ asset('images/sithinem-logo.png') }}" alt="Sithinem Traiteur" width="96" height="96"></a>
     <nav class="main-nav" aria-label="Navigation principale">
         <a href="{{ route('home') }}" @class(['active' => request()->routeIs('home')])>Accueil</a>
         <a href="{{ route('menu') }}" @class(['active' => request()->routeIs('menu')])>La carte</a>
@@ -33,7 +33,8 @@
     @if($admin)
         <form method="post" action="{{ route('logout') }}">@csrf<button class="button secondary small" data-test="admin-logout">Se déconnecter</button></form>
     @else
-        <a class="button cart-link" href="{{ route('cart') }}">Mon panier <span>{{ array_sum(session('cart', [])) }}</span></a>
+        @php($cartCount = array_sum(session('cart', [])))
+        <a @class(['button', 'cart-link', 'has-items' => $cartCount > 0]) href="{{ route('cart') }}" aria-label="Mon panier, {{ $cartCount }} article(s)">Mon panier <span aria-hidden="true">{{ $cartCount }}</span></a>
     @endif
 </header>
 @if($admin)
@@ -50,7 +51,16 @@
     @if(!$admin && request()->routeIs('home', 'menu', 'menus.*', 'offers', 'cart', 'checkout'))@include('restaurant.menu-proposal')@endif
     {{ $slot }}
 </main>
-<footer class="site-footer"><a class="footer-brand" href="{{ route('home') }}">SITHINEM</a><p>Les saveurs d’Asie, à emporter.</p><p>Paiement sur place lors du retrait.</p><span>© {{ date('Y') }} Sithinem</span><nav aria-label="Informations légales"><a href="{{ route('privacy') }}">Confidentialité / RGPD</a> · <a href="{{ route('terms') }}">CGU</a> · <a href="{{ route('cookies') }}">Gérer les cookies</a></nav></footer>
+@if(!$admin && ($cartCount ?? 0) > 0 && !request()->routeIs('cart', 'checkout', 'menus.show', 'menus.builder'))
+<a class="mobile-cart" href="{{ route('cart') }}"><span class="mobile-cart-count" aria-hidden="true">{{ $cartCount }}</span><span>Voir mon panier</span><span aria-hidden="true">→</span></a>
+@endif
+<footer class="site-footer">
+    <div class="footer-intro"><a class="footer-brand" href="{{ route('home') }}"><img src="{{ asset('images/sithinem-logo.png') }}" alt="Sithinem Traiteur" width="72" height="72" loading="lazy"></a><p>Les saveurs d’Asie, cuisinées avec cœur et à emporter.</p></div>
+    <nav class="footer-links" aria-label="Découvrir"><strong>Découvrir</strong><a href="{{ route('menu') }}">La carte</a><a href="{{ route('menus.index') }}">Nos menus</a><a href="{{ route('offers') }}">Les offres</a></nav>
+    <div class="footer-links"><strong>Votre retrait</strong><span>Retrait sur rendez-vous</span><span>Commande au moins 30 min à l’avance</span><span>Paiement sur place lors du retrait</span></div>
+    <nav class="footer-links" aria-label="Informations légales"><strong>Informations</strong><a href="{{ route('privacy') }}">Confidentialité / RGPD</a><a href="{{ route('terms') }}">CGU</a><a href="{{ route('cookies') }}">Gérer les cookies</a></nav>
+    <p class="footer-copy">© {{ date('Y') }} Sithinem · Traiteur asiatique</p>
+</footer>
 @include('restaurant.cookie-banner')
 </body>
 </html>

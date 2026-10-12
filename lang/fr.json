@@ -39,5 +39,8 @@
     "This is a secure area of the application. Please confirm your password before continuing.": "Confirmez votre mot de passe pour accéder à cet espace sécurisé.",
     "Authentication Code": "Code d’authentification",
     "Recovery Code": "Code de récupération",
-    "Continue": "Continuer"
+    "Continue": "Continuer",
+    "Sign in with a passkey": "Se connecter avec une clé d’accès",
+    "Authenticating...": "Vérification…",
+    "Or continue with email": "Ou continuer avec votre e-mail"
 }

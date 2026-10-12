@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Desktop;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\RestaurantSetting;
 use App\Services\AdminOperations;
 use App\Services\OrderPrintingService;
 use App\Services\OrderService;
@@ -32,6 +33,20 @@ class OrderController extends Controller
                 'issues' => DB::table('order_print_jobs')->whereIn('status', ['failed', 'uncertain'])->orderByDesc('id')->limit(20)->get()
                     ->map(fn ($job) => ['id' => $job->id, 'order_id' => $job->order_id, 'error' => $job->error])->all(),
             ],
+        ]);
+    }
+
+    /** Live feed: orders created since the last one the application saw, whatever their pickup day. */
+    public function recent(Request $request): JsonResponse
+    {
+        $data = $request->validate(['after' => 'nullable|integer|min:0']);
+        $timezone = RestaurantSetting::query()->findOrFail(1)->timezone;
+        $orders = isset($data['after']) ? Order::query()->with(['slot', 'items'])->where('id', '>', $data['after'])->orderBy('id')->limit(50)->get() : collect();
+
+        return response()->json([
+            'latest_id' => (int) Order::query()->max('id'),
+            'orders' => $orders->map(fn (Order $order) => DesktopPresenter::order($order))->values()->all(),
+            'preparing_today' => Order::query()->where('status', 'preparing')->whereHas('slot', fn ($q) => $q->whereDate('date', CarbonImmutable::now($timezone)->format('Y-m-d')))->count(),
         ]);
     }
 

@@ -6,7 +6,7 @@ const { version } = require('../package.json');
 
 const release = path.join(__dirname, '..', 'release');
 const target = path.join(__dirname, '..', '..', 'public', 'logiciel', 'mises-a-jour');
-const installer = `Sithi-Nem-Setup-${version}.exe`;
+const installer = `Sithinem-Setup-${version}.exe`;
 const files = ['latest.yml', installer, installer + '.blockmap'];
 
 for (const file of files) {

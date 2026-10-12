@@ -16,7 +16,12 @@ if (smokeTest || updateCheck) {
   const temporaryProfile = path.join(app.getPath('temp'), 'sithinem-smoke-' + process.pid);
   fs.mkdirSync(temporaryProfile, { recursive: true });
   app.setPath('userData', temporaryProfile);
+} else {
+  // The settings folder keeps its original name, so renaming the product never loses a workstation's settings.
+  app.setPath('userData', path.join(app.getPath('appData'), 'Sithi Nem'));
 }
+const iconPath = path.join(__dirname, 'ui/img/mark.png');
+const TITLEBAR = { light: { color: '#f4f2ec', symbolColor: '#1d2b24', height: 40 }, dark: { color: '#1c3328', symbolColor: '#ffffff', height: 40 } };
 let status = 'Impression arrêtée.', lastEvent = '', config = {}, update = { status: 'idle' };
 const localPage = pathToFileURL(path.join(__dirname, 'ui/settings.html')).href;
 const appPage = pathToFileURL(path.join(__dirname, 'ui/app.html')).href;
@@ -100,7 +105,7 @@ async function fetchApi(method, route, input = {}, bearer = sessionToken()) {
   let response;
   try {
     // Redirects are refused so the token is never sent anywhere but the configured site.
-    response = await net.fetch(config.siteUrl + target, { method: apiMethod(method), body, redirect: 'error', signal: AbortSignal.timeout(30000),
+    response = await net.fetch(config.siteUrl + target, { method: apiMethod(method), body, redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(30000),
       headers: { Accept: 'application/json', ...(bearer ? { Authorization: 'Bearer ' + bearer } : {}), ...headers } });
   } catch {
     throw new Error('Le site est injoignable. Vérifiez la connexion Internet puis réessayez.');
@@ -171,11 +176,15 @@ async function runUpdateCheck() {
 }
 function openApp(view) {
   if (!mainWindow || mainWindow.isDestroyed()) {
-    mainWindow = new BrowserWindow({ show: false, width: 1400, height: 900, minWidth: 1024, minHeight: 680, title: 'Sithi Nem', backgroundColor: '#f4f2ec',
-      webPreferences: { ...securePreferences, offscreen: smokeTest, autoplayPolicy: 'no-user-gesture-required', preload: path.join(__dirname, 'app-preload.cjs') } });
+    // No system title bar or menu: the window buttons are drawn over the application's own top strip.
+    mainWindow = new BrowserWindow({ show: false, width: 1400, height: 900, minWidth: 1024, minHeight: 680, title: 'Sithinem', icon: iconPath, backgroundColor: '#f4f2ec',
+      titleBarStyle: 'hidden', titleBarOverlay: TITLEBAR.light,
+      // No background throttling: the board must keep updating while another window covers it.
+      webPreferences: { ...securePreferences, offscreen: smokeTest, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required', preload: path.join(__dirname, 'app-preload.cjs') } });
     mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
     mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
+    mainWindow.webContents.on('before-input-event', (event, input) => { if (shortcut(input)) event.preventDefault(); });
     mainWindow.on('close', (event) => { if (!quitting) { event.preventDefault(); mainWindow.hide(); } });
     mainWindow.once('ready-to-show', () => { if (!smokeTest) mainWindow.show(); });
     mainWindow.loadFile(path.join(__dirname, 'ui/app.html'));
@@ -185,9 +194,25 @@ function openApp(view) {
     else send('app:event', { type: 'navigate', view });
   }
 }
+// Keyboard shortcuts, kept without a menu bar.
+const VIEWS = ['orders', 'take-order', 'card', 'formulas', 'slots', 'calendar', 'statistics'];
+function shortcut(input) {
+  if (input.type !== 'keyDown') return false;
+  const contents = mainWindow.webContents;
+  const control = input.control && !input.alt && !input.meta;
+  if (control && /^[1-7]$/.test(input.key)) { send('app:event', { type: 'navigate', view: VIEWS[Number(input.key) - 1] }); return true; }
+  if (control && input.key.toLowerCase() === 'n') { send('app:event', { type: 'navigate', view: 'take-order' }); return true; }
+  if (input.key === 'F5' && !input.control) { send('app:event', { type: 'refresh' }); return true; }
+  if (input.key === 'F11') { mainWindow.setFullScreen(!mainWindow.isFullScreen()); return true; }
+  if (control && input.key === '0') { contents.setZoomLevel(0); return true; }
+  if (control && ['+', '='].includes(input.key)) { contents.setZoomLevel(Math.min(3, contents.getZoomLevel() + 0.5)); return true; }
+  if (control && input.key === '-') { contents.setZoomLevel(Math.max(-3, contents.getZoomLevel() - 0.5)); return true; }
+  if (input.key === 'F12' && !app.isPackaged) { contents.toggleDevTools(); return true; }
+  return false;
+}
 function openSettings() {
   if (settingsWindow && !settingsWindow.isDestroyed()) { settingsWindow.show(); settingsWindow.focus(); return; }
-  settingsWindow = new BrowserWindow({ show: !smokeTest, width: 740, height: 860, minWidth: 620, minHeight: 680, autoHideMenuBar: true, title: 'Sithi Nem — Paramètres du poste', webPreferences: { ...securePreferences, offscreen: smokeTest, preload: path.join(__dirname, 'preload.cjs') } });
+  settingsWindow = new BrowserWindow({ show: !smokeTest, width: 740, height: 860, minWidth: 620, minHeight: 680, autoHideMenuBar: true, title: 'Sithinem — Paramètres du poste', icon: iconPath, webPreferences: { ...securePreferences, offscreen: smokeTest, preload: path.join(__dirname, 'preload.cjs') } });
   settingsWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   settingsWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   settingsWindow.loadFile(path.join(__dirname, 'ui/settings.html'));
@@ -239,38 +264,32 @@ else {
     handle('app:api', trustedApp, (method, route, input) => callApi(method, route, input));
     handle('app:settings', trustedApp, () => openSettings());
     handle('app:update', trustedApp, () => setupUpdates.install());
+    handle('app:check-update', trustedApp, () => checkUpdatesNow());
+    handle('app:titlebar', trustedApp, (theme) => { if (TITLEBAR[theme] && !smokeTest) mainWindow.setTitleBarOverlay(TITLEBAR[theme]); });
     handle('app:print', trustedApp, (ticket) => {
       if (!ticket || typeof ticket.title !== 'string' || typeof ticket.text !== 'string' || ticket.text.length > 20000) throw new Error('Ticket invalide.');
       return printOnce('ticket', { SITHINEM_TICKET_TITLE: ticket.title.slice(0, 100), SITHINEM_TICKET_TEXT: ticket.text.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '') });
     });
     handle('app:notify', trustedApp, (note) => {
       if (!note || typeof note.title !== 'string' || typeof note.body !== 'string' || !Notification.isSupported() || mainWindow?.isFocused()) return;
-      const notification = new Notification({ title: note.title.slice(0, 120), body: note.body.slice(0, 300) });
+      const notification = new Notification({ title: note.title.slice(0, 120), body: note.body.slice(0, 300), icon: iconPath });
       notification.on('click', () => openApp('orders'));
       notification.show();
     });
-    Menu.setApplicationMenu(Menu.buildFromTemplate([
-      { label: 'Restaurant', submenu: [
-        ...[['orders', 'Commandes'], ['take-order', 'Prise de commande'], ['card', 'Carte'], ['formulas', 'Formules'], ['slots', 'Créneaux & capacité'], ['calendar', 'Calendrier'], ['statistics', 'Statistiques']]
-          .map(([view, label], index) => ({ label, accelerator: 'CmdOrCtrl+' + (index + 1), click: () => openApp(view) })),
-        { type: 'separator' },
-        { label: 'Nouvelle commande', accelerator: 'CmdOrCtrl+N', click: () => openApp('take-order') },
-        { type: 'separator' }, { label: 'Imprimante et connexion', click: openSettings }, { label: 'Rechercher une mise à jour', click: checkUpdatesNow }, { label: 'Quitter', click: () => app.quit() } ] },
-      { label: 'Édition', submenu: [ { role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' } ] },
-      { label: 'Affichage', submenu: [ { label: 'Actualiser', accelerator: 'F5', click: () => send('app:event', { type: 'refresh' }) }, { type: 'separator' }, { role: 'resetZoom', label: 'Taille normale' }, { role: 'zoomIn', label: 'Agrandir' }, { role: 'zoomOut', label: 'Réduire' }, { role: 'togglefullscreen', label: 'Plein écran' } ] }
-    ]));
-    const pixels = Buffer.alloc(32 * 32 * 4);
-    for (let i = 0; i < pixels.length; i += 4) { pixels[i] = 88; pixels[i + 1] = 110; pixels[i + 2] = 30; pixels[i + 3] = 255; }
-    tray = new Tray(nativeImage.createFromBitmap(pixels, { width: 32, height: 32 }));
-    tray.setToolTip('Sithi Nem — gestion et impression');
+    // No menu bar: navigation lives in the application, shortcuts are handled per window.
+    Menu.setApplicationMenu(null);
+    tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'ui/img/tray.png')));
+    tray.setToolTip('Sithinem — gestion et impression');
     tray.setContextMenu(Menu.buildFromTemplate([ { label: 'Ouvrir les commandes', click: () => openApp('orders') }, { label: 'Nouvelle commande', click: () => openApp('take-order') }, { label: 'Paramètres et imprimante', click: openSettings }, { label: 'Quitter et arrêter l’impression', click: () => app.quit() } ]));
     tray.on('double-click', () => openApp());
+    // Refresh the Windows start-up entry so it follows the executable after an update or a rename.
+    if (app.isPackaged && !smokeTest && config.startup) app.setLoginItemSettings({ openAtLogin: true });
     await startPrinter();
     setupUpdates();
     openApp();
     if (!config.siteUrl) openSettings();
     if (smokeTest) runSmokeTest();
-  }).catch(() => { dialog.showErrorBox('Sithi Nem', 'Impossible de démarrer l’application.'); app.exit(1); });
+  }).catch(() => { dialog.showErrorBox('Sithinem', 'Impossible de démarrer l’application.'); app.exit(1); });
   app.on('window-all-closed', () => {});
   app.on('before-quit', () => { quitting = true; stopPrinter(); });
 }
@@ -315,6 +334,33 @@ async function runSmokeTest() {
         await wait(2500);
         await capture(mainWindow, 'view-' + view);
         result.views.push(view);
+      }
+      if (process.env.SITHINEM_SMOKE_LIVE) {
+        // Live board: while the board stays open, another client orders for the displayed day, then for another day.
+        // The first must appear highlighted without refreshing; the second must be announced by a banner.
+        const [shown, other] = process.env.SITHINEM_SMOKE_LIVE.split(',');
+        await contents.executeJavaScript(`App.navigate('orders', { date: ${JSON.stringify(shown)} })`);
+        await wait(4000);
+        const count = () => contents.executeJavaScript(`({ cards: document.querySelectorAll('.order-card').length, fresh: document.querySelectorAll('.order-card.fresh').length, banners: document.querySelectorAll('.live-banner').length, live: document.querySelector('.live')?.textContent })`);
+        const catalog = (await callApi('GET', '/ordering/catalog')).data;
+        const option = catalog.products.flatMap((product) => product.options).find((unit) => unit.available && !unit.side_ids.length);
+        result.live = { before: await count(), steps: [] };
+        for (const date of [shown, other].filter(Boolean)) {
+          const slots = (await callApi('GET', '/ordering/slots', { query: { date, total: option.price } })).data;
+          const slot = slots.slots.find((candidate) => candidate.selectable);
+          const created = await callApi('POST', '/orders', { json: { items: [{ key: 'product:' + option.id, quantity: 1 }], customer_name: 'Client en direct ' + date, source: 'phone', phone: '0612345678', slot_id: slot.id, idempotency_key: slots.idempotency_key, expected_total: option.price } });
+          if (created.status !== 201) throw new Error('Live order not created: ' + JSON.stringify(created.data).slice(0, 300));
+          const started = Date.now();
+          let seen = null;
+          while (Date.now() - started < 10000) {
+            await wait(250);
+            const state = await count();
+            if (state.fresh > 0 && (date === shown ? state.cards > result.live.before.cards : state.banners > 0)) { seen = { ...state, seconds: (Date.now() - started) / 1000 }; break; }
+          }
+          result.live.steps.push({ date, order: created.data.order.id, seen });
+          await capture(mainWindow, 'live-' + date);
+          if (!seen) throw new Error('Live order not shown: ' + JSON.stringify(result.live) + ' ' + JSON.stringify(await count()));
+        }
       }
       if (process.env.SITHINEM_SMOKE_ORDER === '1') {
         // Drives the order-taking screen like a user: one dish, customer, first free slot, then save.

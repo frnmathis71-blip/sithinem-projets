@@ -109,6 +109,19 @@ test('the board, status, payment and tickets follow the web rules', function () 
     $this->withToken($token)->getJson(route('desktop.statistics'))->assertOk()->assertJsonStructure(['report' => ['periods', 'chart'], 'waiting']);
 });
 
+test('the live feed reports every new order whatever its pickup day', function () {
+    $token = desktopToken($this);
+    $start = $this->withToken($token)->getJson(route('desktop.orders.recent'))->assertOk()->assertJsonCount(0, 'orders')->json('latest_id');
+    foreach (['2026-09-18', '2026-09-19'] as $date) {
+        $this->withToken($token)->postJson(route('desktop.orders.store'), ['items' => [['key' => 'product:'.$this->main->id, 'quantity' => 1]], 'customer_name' => 'Client '.$date, 'source' => 'phone',
+            'phone' => '0612345678', 'slot_id' => app(SlotService::class)->forDate($date)[0]['id'], 'idempotency_key' => (string) Str::uuid(), 'expected_total' => 1200])->assertCreated();
+    }
+    $feed = $this->withToken($token)->getJson(route('desktop.orders.recent', ['after' => $start]))->assertOk();
+    expect(array_column($feed->json('orders'), 'customer_name'))->toBe(['Client 2026-09-18', 'Client 2026-09-19'])
+        ->and($feed->json('preparing_today'))->toBe(1)->and($feed->json('latest_id'))->toBe(Order::max('id'));
+    $this->withToken($token)->getJson(route('desktop.orders.recent', ['after' => $feed->json('latest_id')]))->assertJsonCount(0, 'orders');
+});
+
 test('card, formulas, slots and calendar are managed with the same validation as the web back office', function () {
     $token = desktopToken($this);
     $this->withToken($token)->postJson(route('desktop.card.save', 'product'), ['name' => 'Bobun', 'price' => '9,50', 'available' => true, 'category_id' => 'type:main',

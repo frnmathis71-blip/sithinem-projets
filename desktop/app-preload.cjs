@@ -8,5 +8,7 @@ contextBridge.exposeInMainWorld('sithinem', {
   notify: (note) => ipcRenderer.invoke('app:notify', note),
   settings: () => ipcRenderer.invoke('app:settings'),
   installUpdate: () => ipcRenderer.invoke('app:update'),
+  checkUpdate: () => ipcRenderer.invoke('app:check-update'),
+  titlebar: (theme) => ipcRenderer.invoke('app:titlebar', theme),
   onEvent: (listener) => ipcRenderer.on('app:event', (_event, payload) => listener(payload))
 });
