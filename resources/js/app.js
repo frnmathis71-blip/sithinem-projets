@@ -186,3 +186,11 @@ const syncEndDate = () => {
 };
 noEndDate?.addEventListener('change', syncEndDate);
 syncEndDate();
+
+// The home intro fills the rest of the window, whatever the height of the banner and header above it.
+const homeIntro = document.querySelector('[data-home-intro]');
+if (homeIntro) {
+    const fit = () => homeIntro.style.setProperty('--intro-top', `${Math.round(homeIntro.getBoundingClientRect().top + window.scrollY)}px`);
+    fit();
+    window.addEventListener('resize', fit);
+}
