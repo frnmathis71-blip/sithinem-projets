@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/commandes', [StoreController::class, 'place'])->block()->middleware('throttle:20,1')->name('orders.store');
     Route::get('/mes-commandes', [StoreController::class, 'orders'])->name('orders.index');
     Route::get('/mes-commandes/{order}', [StoreController::class, 'show'])->name('orders.show');
+    Route::post('/mes-commandes/{order}/paiement', [StoreController::class, 'pay'])->block()->middleware('throttle:20,1')->name('orders.pay');
     Route::get('/mon-compte', [StoreController::class, 'account'])->name('account');
     Route::patch('/mon-compte', [StoreController::class, 'saveAccount'])->name('account.update');
 });

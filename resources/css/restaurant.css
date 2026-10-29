@@ -704,3 +704,18 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .weekday-chip input:checked + span { background:var(--ink); border-color:var(--ink); color:#fff; }
 .restaurant .weekday-chip input:focus-visible + span { outline:3px solid var(--orange); outline-offset:2px; }
 .restaurant .badge.weekday { background:#fbefd6; color:#7d5200; }
+
+/* Payment choice at checkout and online payment follow-up. */
+.restaurant .payment-choice { border:0; padding:0; margin:18px 0 6px; display:grid; gap:8px; }
+.restaurant .payment-choice legend { margin-bottom:8px; font-size:.82rem; font-weight:600; }
+.restaurant .payment-option { display:flex !important; align-items:flex-start; gap:12px; padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); cursor:pointer; }
+.restaurant .payment-option input { margin-top:4px; }
+.restaurant .payment-option span { display:flex; flex-direction:column; gap:2px; }
+.restaurant .payment-option small { color:var(--muted); font-size:.8rem; font-weight:400; }
+.restaurant .payment-option:has(input:checked) { border:2px solid var(--ink); background:var(--soft); padding:13px 15px; }
+.restaurant .payment-option.unavailable { cursor:not-allowed; }
+.restaurant .payment-option.unavailable strong { color:var(--muted); }
+.restaurant .payment-option small a { pointer-events:auto; }
+.restaurant .payment-pending { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; }
+.restaurant .payment-pending p { margin:0; max-width:620px; }
+.restaurant .badge.status-awaiting_payment { background:#e5ecf6; color:#2f4f7a; }

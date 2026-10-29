@@ -46,7 +46,8 @@ $adminLinks = [
     </div>
 </aside>
 @else
-<div class="announcement">CUISINÉ AVEC CŒUR · À EMPORTER UNIQUEMENT · PAIEMENT AU RETRAIT</div>
+@php($onlinePayment = app(\App\Services\StripeCheckoutService::class)->enabled())
+<div class="announcement">CUISINÉ AVEC CŒUR · À EMPORTER UNIQUEMENT · {{ $onlinePayment ? 'PAIEMENT EN LIGNE OU AU RETRAIT' : 'PAIEMENT AU RETRAIT' }}</div>
 <header class="site-header">
     <a href="{{ route('home') }}" class="brand" aria-label="Sithinem, accueil"><img class="brand-logo" src="{{ asset('images/sithinem-logo.png') }}" alt="Sithinem Traiteur" width="96" height="96"></a>
     <nav class="main-nav" aria-label="Navigation principale">
@@ -82,7 +83,7 @@ $adminLinks = [
 <footer class="site-footer">
     <div class="footer-intro"><a class="footer-brand" href="{{ route('home') }}"><img src="{{ asset('images/sithinem-logo.png') }}" alt="Sithinem Traiteur" width="72" height="72" loading="lazy"></a><p>Les saveurs d’Asie, cuisinées avec cœur et à emporter.</p></div>
     <nav class="footer-links" aria-label="Découvrir"><strong>Découvrir</strong><a href="{{ route('menu') }}">La carte</a><a href="{{ route('menus.index') }}">Nos menus</a><a href="{{ route('offers') }}">Les offres</a><a href="{{ route('contact') }}">Contact</a></nav>
-    <div class="footer-links"><strong>Votre retrait</strong><span>Retrait sur rendez-vous</span><span>Commande au moins 30 min à l’avance</span><span>Paiement sur place lors du retrait</span></div>
+    <div class="footer-links"><strong>Votre retrait</strong><span>Retrait sur rendez-vous</span><span>Commande au moins 30 min à l’avance</span><span>{{ $onlinePayment ? 'Paiement en ligne ou sur place' : 'Paiement sur place lors du retrait' }}</span></div>
     <nav class="footer-links" aria-label="Informations légales"><strong>Informations</strong><a href="{{ route('privacy') }}">Confidentialité / RGPD</a><a href="{{ route('terms') }}">CGU</a><a href="{{ route('cookies') }}">Gérer les cookies</a></nav>
     <p class="footer-copy">© {{ date('Y') }} Sithinem · Traiteur asiatique</p>
 </footer>

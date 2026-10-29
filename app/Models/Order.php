@@ -17,11 +17,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $phone
  * @property int $total
  * @property CarbonImmutable|null $paid_at
+ * @property string $payment_method
+ * @property string|null $stripe_session_id
+ * @property CarbonImmutable $created_at
  * @property-read TimeSlot $slot
+ * @property-read User $user
  */
 class Order extends Model
 {
-    public const STATUSES = ['preparing' => 'En préparation', 'completed' => 'Terminée', 'cancelled' => 'Annulée'];
+    /** An online order waits for its Stripe payment before reaching the kitchen; it keeps its slot meanwhile. */
+    public const STATUSES = ['awaiting_payment' => 'Paiement en attente', 'preparing' => 'En préparation', 'completed' => 'Terminée', 'cancelled' => 'Annulée'];
+
+    public const PAYMENT_METHODS = ['onsite' => 'Sur place au retrait', 'online' => 'En ligne'];
 
     public const HISTORY_LABELS = ['new' => 'Nouvelle', 'confirmed' => 'Confirmée', 'ready' => 'Prête', 'collected' => 'Retirée', ...self::STATUSES];
 
@@ -48,5 +55,11 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

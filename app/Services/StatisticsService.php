@@ -22,7 +22,7 @@ class StatisticsService
             $previous = (int) $this->query($previousStart, $previousEnd)->sum('total');
             $periods[] = ['label' => $label, 'revenue' => $revenue, 'count' => $totals['count'], 'evolution' => $previous > 0 ? round(($revenue - $previous) / $previous * 100) : null];
         }
-        $today = Order::query()->whereHas('slot', fn (Builder $q) => $q->whereDate('date', $now->format('Y-m-d')))->where('status', '!=', 'cancelled');
+        $today = Order::query()->whereHas('slot', fn (Builder $q) => $q->whereDate('date', $now->format('Y-m-d')))->whereNotIn('status', ['cancelled', 'awaiting_payment']);
         $units = 0;
         foreach ((clone $today)->where('status', 'completed')->with('items')->get() as $order) {
             foreach ($order->items as $item) {
@@ -52,6 +52,6 @@ class StatisticsService
     /** @return Builder<Order> */
     private function query(CarbonImmutable $start, CarbonImmutable $end): Builder
     {
-        return Order::query()->where('status', '!=', 'cancelled')->whereBetween('created_at', [$start->utc(), $end->utc()]);
+        return Order::query()->whereNotIn('status', ['cancelled', 'awaiting_payment'])->whereBetween('created_at', [$start->utc(), $end->utc()]);
     }
 }

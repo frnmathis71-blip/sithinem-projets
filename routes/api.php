@@ -6,8 +6,11 @@ use App\Http\Controllers\Desktop\OrderController as DesktopOrderController;
 use App\Http\Controllers\Desktop\ScheduleController;
 use App\Http\Controllers\Desktop\SessionController;
 use App\Http\Controllers\OrderPrintController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Http\Middleware\AuthenticateDesktop;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/stripe/webhook', StripeWebhookController::class)->middleware('throttle:120,1')->name('stripe.webhook');
 
 Route::prefix('printing')->middleware('throttle:120,1')->group(function () {
     Route::post('/claim', [OrderPrintController::class, 'claim']);

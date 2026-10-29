@@ -19,7 +19,7 @@ class FeaturedProductService
             && ($p->has_variants ? $p->variants->contains(fn (Product $v) => $catalog->productAvailable($v)) : $catalog->productAvailable($p)))->keyBy('id');
         $parents = Product::withTrashed()->pluck('parent_id', 'id');
         $counts = [];
-        foreach (OrderItem::query()->whereIn('order_id', Order::query()->select('id')->where('status', '!=', 'cancelled'))->cursor() as $line) {
+        foreach (OrderItem::query()->whereIn('order_id', Order::query()->select('id')->whereNotIn('status', ['cancelled', 'awaiting_payment']))->cursor() as $line) {
             $parts = $line->item_type === 'product' ? [['product_id' => $line->item_id, 'quantity' => 1]] : $line->composition;
             foreach ($parts as $part) {
                 $id = $part['product_id'] ?? null;

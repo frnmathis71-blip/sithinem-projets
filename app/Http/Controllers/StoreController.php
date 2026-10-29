@@ -13,6 +13,7 @@ use App\Services\FeaturedProductService;
 use App\Services\OrderService;
 use App\Services\PhoneVerificationService;
 use App\Services\SlotService;
+use App\Services\StripeCheckoutService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -141,7 +142,7 @@ class StoreController extends Controller
             $request->session()->put('checkout_key', (string) Str::uuid());
         }
 
-        return view('restaurant.cart', ['lines' => $lines, 'total' => $total, 'date' => $date, 'slots' => $date ? $slots->forDate($date, $total) : [], 'settings' => $settings, 'bookingDates' => $bookingDates, 'weekdays' => $weekdays]);
+        return view('restaurant.cart', ['lines' => $lines, 'total' => $total, 'date' => $date, 'slots' => $date ? $slots->forDate($date, $total) : [], 'settings' => $settings, 'bookingDates' => $bookingDates, 'weekdays' => $weekdays, 'onlinePayment' => app(StripeCheckoutService::class)->enabled()]);
     }
 
     public function updateCart(Request $request, CatalogService $catalog): RedirectResponse
@@ -201,7 +202,7 @@ class StoreController extends Controller
 
     public function place(Request $request, OrderService $orders): RedirectResponse
     {
-        $data = $request->validate(['slot_id' => 'required|integer|exists:time_slots,id', 'phone' => 'required|string|max:30', 'idempotency_key' => 'required|uuid', 'customer_message' => 'nullable|string|max:1000']);
+        $data = $request->validate(['slot_id' => 'required|integer|exists:time_slots,id', 'phone' => 'required|string|max:30', 'idempotency_key' => 'required|uuid', 'customer_message' => 'nullable|string|max:1000', 'payment_method' => 'sometimes|in:onsite,online']);
         /** @var array<string, int> $cart */
         $cart = $request->session()->get('cart', []);
         if (collect(array_keys($cart))->contains(fn ($key) => str_starts_with($key, 'menu:'))) {
@@ -209,10 +210,35 @@ class StoreController extends Controller
         }
         $user = $request->user();
         abort_unless($user !== null, 401);
-        $order = $orders->place($user, (int) $data['slot_id'], $data['phone'], $data['idempotency_key'], $cart, $request->session()->get('cart_displayed_total'), $data['customer_message'] ?? null);
+        $order = $orders->place($user, (int) $data['slot_id'], $data['phone'], $data['idempotency_key'], $cart, $request->session()->get('cart_displayed_total'), $data['customer_message'] ?? null, $data['payment_method'] ?? 'onsite');
         $request->session()->forget(['cart', 'checkout_key']);
+        if ($order->status === 'awaiting_payment') {
+            return $this->toPayment($order);
+        }
 
         return redirect()->route('orders.show', $order)->with('success', 'Votre commande est enregistrée. Paiement sur place lors du retrait.');
+    }
+
+    /** Resumes the payment of an online order still awaiting it. */
+    public function pay(Request $request, Order $order): RedirectResponse
+    {
+        abort_unless($order->user_id === $request->user()?->id, 403);
+        if ($order->status !== 'awaiting_payment' || $order->paid_at) {
+            return redirect()->route('orders.show', $order);
+        }
+
+        return $this->toPayment($order);
+    }
+
+    private function toPayment(Order $order): RedirectResponse
+    {
+        try {
+            return redirect()->away(app(StripeCheckoutService::class)->paymentUrl($order));
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('orders.show', $order)->withErrors(['payment' => 'Le paiement en ligne est momentanément indisponible. Réessayez dans un instant : votre créneau reste réservé '.StripeCheckoutService::PAYMENT_WINDOW.' minutes.']);
+        }
     }
 
     public function orders(Request $request): View
@@ -223,6 +249,15 @@ class StoreController extends Controller
     public function show(Request $request, Order $order): View
     {
         abort_unless($order->user_id === $request->user()?->id || $request->user()?->role === 'admin', 403);
+        // Back from Stripe: confirm right away instead of waiting for the webhook.
+        if ($order->status === 'awaiting_payment' && $request->query('paiement') === 'confirme' && $request->filled('session_id')) {
+            try {
+                app(StripeCheckoutService::class)->confirmReturn($order, $request->string('session_id')->toString());
+                $order->refresh();
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return view('restaurant.order', ['order' => $order->load(['slot', 'items']), 'histories' => DB::table('order_status_histories')->where('order_id', $order->id)->orderBy('id')->get()]);
     }

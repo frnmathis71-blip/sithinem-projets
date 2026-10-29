@@ -22,6 +22,13 @@ return [
         'verify_service_sid' => env('TWILIO_VERIFY_SERVICE_SID'),
     ],
 
+    // Online payment with Stripe Checkout. Off until STRIPE_ENABLED=true and both keys are set.
+    'stripe' => [
+        'enabled' => (bool) env('STRIPE_ENABLED', false),
+        'secret' => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

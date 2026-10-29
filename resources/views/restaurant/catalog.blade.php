@@ -5,7 +5,7 @@
         <div class="hero-copy"><p class="eyebrow"><span class="little-dot"></span> VOTRE RENDEZ-VOUS GOURMAND</p><h1>Du cœur en cuisine.<br>Du bonheur <em>à emporter.</em></h1><p>Les saveurs de l’Asie, cuisinées à la commande et prêtes à l’heure que vous choisissez.</p><a class="button" href="#carte">Découvrir la carte <span aria-hidden="true">↗</span></a></div>
         @include('restaurant.hero-carousel')
     </section>
-    <ul class="promise-strip"><li><span class="promise-icon" aria-hidden="true">✦</span><span><b>Préparé pour vous</b><small>Cuisiné à la commande</small></span></li><li><span class="promise-icon" aria-hidden="true">◷</span><span><b>Retrait sur rendez-vous</b><small>Choisissez votre créneau</small></span></li><li><span class="promise-icon" aria-hidden="true">€</span><span><b>Paiement sur place</b><small>Rien à régler en ligne</small></span></li></ul>
+    <ul class="promise-strip"><li><span class="promise-icon" aria-hidden="true">✦</span><span><b>Préparé pour vous</b><small>Cuisiné à la commande</small></span></li><li><span class="promise-icon" aria-hidden="true">◷</span><span><b>Retrait sur rendez-vous</b><small>Choisissez votre créneau</small></span></li><li><span class="promise-icon" aria-hidden="true">€</span>@if(app(\App\Services\StripeCheckoutService::class)->enabled())<span><b>Paiement au choix</b><small>En ligne ou au retrait</small></span>@else<span><b>Paiement au retrait</b><small>Sur place, au restaurant</small></span>@endif</li></ul>
 </div>
 @endif
 <section id="carte" class="catalog-section">
