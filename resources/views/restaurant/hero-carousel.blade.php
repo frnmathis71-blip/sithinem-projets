@@ -8,7 +8,7 @@
         @foreach($slides as $slide)
             <div class="hero-slide" role="group" aria-roledescription="diapositive" aria-label="{{ $loop->iteration + 1 }} sur {{ $count }} : {{ $slide['name'] }}" inert>
                 <a class="hero-slide-link" href="{{ $slide['url'] }}">
-                    <span class="hero-slide-media">@if($slide['image'])<img class="hero-slide-backdrop" src="{{ $slide['image'] }}" alt="" loading="lazy"><img src="{{ $slide['image'] }}" alt="" loading="lazy">@else<img class="is-placeholder" src="{{ asset('images/product-placeholder.svg') }}" alt="" loading="lazy">@endif</span>
+                    <span class="hero-slide-media">@if($slide['image'])<img src="{{ $slide['image'] }}" alt="">@else<img class="is-placeholder" src="{{ asset('images/product-placeholder.svg') }}" alt="">@endif</span>
                     <span class="hero-slide-caption"><span class="eyebrow">{{ $slide['label'] }}</span><strong>{{ $slide['name'] }}</strong><span class="hero-slide-price">{{ $slide['price'] }}</span><span class="hero-slide-more">Découvrir <span aria-hidden="true">→</span></span></span>
                 </a>
             </div>

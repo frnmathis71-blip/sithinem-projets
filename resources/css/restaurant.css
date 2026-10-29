@@ -639,27 +639,30 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .home-intro .promise-strip { margin:0; }
 @media (min-width:801px) and (max-height:820px) {
     /* Short laptop screens: a smaller illustration keeps the promises above the fold. */
-    .restaurant .home-intro .hero-art { height:380px; }
+    .restaurant .home-intro .hero-carousel { --slide-h:380px; }
     .restaurant .home-intro .plate { transform:rotate(-24deg) scale(.82); }
 }
 
 /* Home carousel: the slides share one grid cell and turn in 3D; only transform and opacity move. */
-.restaurant .hero-carousel { --arch:20px; position:relative; min-width:0; }
+.restaurant .hero-carousel { --arch:20px; --slide-h:455px; position:relative; min-width:0; }
+@media (min-width:1600px) { .restaurant .hero-carousel { --slide-h:490px; } }
+@media (max-width:1100px) { .restaurant .hero-carousel { --slide-h:400px; } }
+@media (max-width:800px) { .restaurant .hero-carousel { --slide-h:350px; } }
+@media (max-width:480px) { .restaurant .hero-carousel { --slide-h:310px; } }
 .restaurant .hero-slides { display:grid; perspective:1600px; }
 .restaurant .hero-slide { grid-area:1 / 1; min-width:0; opacity:0; backface-visibility:hidden; transition:transform 650ms var(--motion-ease), opacity 400ms ease-out; }
 .restaurant .hero-slide.is-active { opacity:1; transform:none; z-index:1; }
 .restaurant .hero-slide.from-right { transform:translateX(30%) rotateY(-60deg) scale(.9); }
 .restaurant .hero-slide.from-left { transform:translateX(-30%) rotateY(60deg) scale(.9); }
 .restaurant .hero-slide.no-transition { transition:none; }
-.restaurant .hero-carousel .hero-art { border-radius:var(--arch); }
-.restaurant .hero-slide-link { position:relative; display:flex; flex-direction:column; height:100%; overflow:hidden; border-radius:var(--arch); background:#e3e6cf; box-shadow:var(--shadow-md); color:var(--ink); text-decoration:none; }
+.restaurant .hero-carousel .hero-art { height:var(--slide-h); border-radius:var(--arch); }
+/* Photo slides: the card takes the shape of the photo, centred in the slide, so nothing is cropped or padded. */
+.restaurant .hero-slide:has(.hero-slide-link) { display:flex; align-items:center; justify-content:center; }
+.restaurant .hero-slide-link { display:flex; flex-direction:column; width:max-content; max-width:100%; overflow:hidden; border-radius:var(--arch); background:var(--surface); box-shadow:var(--shadow-md); color:var(--ink); text-decoration:none; }
 .restaurant .hero-slide-link:hover { color:var(--ink); }
-/* The whole photo stays visible: it is contained, over a blurred copy that fills the frame. */
-.restaurant .hero-slide-media { position:relative; flex:1; min-height:0; overflow:hidden; background:#ecefdf; }
-.restaurant .hero-slide-media img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
-.restaurant .hero-slide-media .hero-slide-backdrop { object-fit:cover; filter:blur(22px) saturate(1.1); opacity:.6; transform:scale(1.15); }
-.restaurant .hero-slide-media img.is-placeholder { padding:6% 4%; }
-.restaurant .hero-slide-caption { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:2px 12px; padding:14px 20px 16px; border-top:1px solid var(--line); background:var(--surface); }
+.restaurant .hero-slide-media { display:block; }
+.restaurant .hero-slide-media img { display:block; width:auto; height:auto; max-width:100%; max-height:calc(var(--slide-h) - 110px); }
+.restaurant .hero-slide-caption { display:grid; width:0; min-width:100%; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:2px 12px; padding:14px 20px 16px; border-top:1px solid var(--line); background:var(--surface); }
 .restaurant .hero-slide-caption .eyebrow { grid-column:1 / -1; margin:0; color:var(--orange); }
 .restaurant .hero-slide-caption strong { grid-column:1 / -1; font-size:1.3rem; line-height:1.25; letter-spacing:-.03em; }
 .restaurant .hero-slide-price { font-weight:600; }
