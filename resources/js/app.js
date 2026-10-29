@@ -195,16 +195,16 @@ if (homeIntro) {
     window.addEventListener('resize', fit);
 }
 
-// Home carousel: turns every 5 seconds, pauses on hover, focus, hidden tab or on request.
+// Home carousel: turns every 5 seconds, pauses on hover, focus or hidden tab.
 const carousel = document.querySelector('[data-hero-carousel]');
 if (carousel) {
     const slides = [...carousel.querySelectorAll('.hero-slide')];
     const dots = [...carousel.querySelectorAll('[data-carousel-dot]')];
-    const pauseButton = carousel.querySelector('[data-carousel-pause]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let active = 0;
     let timer = null;
-    let paused = reducedMotion;
+    // With reduced motion, slides only change when the visitor picks one.
+    const paused = reducedMotion;
     let held = false;
 
     const show = (index, direction = 1) => {
@@ -229,18 +229,11 @@ if (carousel) {
         clearInterval(timer);
         timer = paused || held || document.hidden ? null : setInterval(() => show((active + 1) % slides.length), 5000);
     };
-    const setPaused = (value) => {
-        paused = value;
-        carousel.toggleAttribute('data-paused', paused);
-        pauseButton.setAttribute('aria-label', paused ? 'Reprendre le défilement' : 'Mettre en pause le défilement');
-        schedule();
-    };
 
     dots.forEach((dot, i) => dot.addEventListener('click', () => {
         show(i, i > active ? 1 : -1);
         schedule();
     }));
-    pauseButton.addEventListener('click', () => setPaused(!paused));
     // Hovering or focusing a slide holds it, so a link never moves away under the pointer.
     carousel.addEventListener('pointerenter', (event) => { if (event.pointerType === 'mouse') { held = true; schedule(); } });
     carousel.addEventListener('pointerleave', () => { held = false; schedule(); });
@@ -258,5 +251,5 @@ if (carousel) {
         schedule();
     }, { passive: true });
 
-    setPaused(paused);
+    schedule();
 }

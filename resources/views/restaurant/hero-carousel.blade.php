@@ -16,7 +16,6 @@
     </div>
     @if($count > 1)
         <div class="hero-carousel-controls">
-            <button type="button" class="hero-carousel-pause" data-carousel-pause aria-label="Mettre en pause le défilement"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-pause" d="M9 6v12M15 6v12"/><path class="icon-play" d="M8 5.5v13l10-6.5z"/></svg></button>
             @for($i = 0; $i < $count; $i++)
                 <button type="button" class="hero-carousel-dot" data-carousel-dot="{{ $i }}" aria-label="Afficher la diapositive {{ $i + 1 }}" @if($i === 0) aria-current="true" @endif></button>
             @endfor

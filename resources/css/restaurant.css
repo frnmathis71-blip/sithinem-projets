@@ -662,16 +662,11 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .hero-slide-caption strong { grid-column:1 / -1; font-size:1.3rem; line-height:1.25; letter-spacing:-.03em; }
 .restaurant .hero-slide-price { font-weight:600; }
 .restaurant .hero-slide-more { color:var(--orange); font-size:.86rem; font-weight:600; }
-.restaurant .hero-carousel-controls { position:absolute; left:50%; bottom:14px; z-index:2; display:flex; align-items:center; gap:2px; padding:4px 8px; border-radius:999px; background:rgb(255 253 248 / 88%); box-shadow:var(--shadow-sm); transform:translateX(-50%); }
+.restaurant .hero-carousel-controls { position:absolute; left:50%; bottom:14px; z-index:2; display:flex; align-items:center; gap:2px; padding:4px 10px; border-radius:10px; background:rgb(255 253 248 / 88%); box-shadow:var(--shadow-sm); transform:translateX(-50%); }
 .restaurant .hero-carousel-dot { display:grid; place-items:center; width:24px; height:28px; padding:0; border:0; background:none; cursor:pointer; }
 .restaurant .hero-carousel-dot::before { content:''; width:8px; height:8px; border-radius:999px; background:#9baa91; transition:width var(--motion-normal) var(--motion-ease), background-color var(--motion-fast) ease-out; }
 .restaurant .hero-carousel-dot[aria-current="true"]::before { width:22px; background:var(--ink); }
 .restaurant .hero-carousel-dot[aria-current="true"] { width:38px; }
-.restaurant .hero-carousel-pause { display:grid; place-items:center; width:28px; height:28px; margin-right:2px; padding:0; border:0; border-radius:50%; background:none; color:var(--ink); cursor:pointer; }
-.restaurant .hero-carousel-pause:hover { background:var(--soft); }
-.restaurant .hero-carousel-pause svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
-.restaurant .hero-carousel-pause .icon-play, .restaurant [data-paused] .hero-carousel-pause .icon-pause { display:none; }
-.restaurant [data-paused] .hero-carousel-pause .icon-play { display:inline; fill:currentColor; }
 @media (max-width:800px) {
     .restaurant .hero-carousel { --arch:140px 140px 8px 8px; margin-top:15px; }
     .restaurant .hero-carousel .hero-art { margin-top:0; }
