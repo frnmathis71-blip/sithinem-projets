@@ -10,7 +10,7 @@
         <p>Notre numéro sera bientôt disponible. En attendant, vous pouvez commander en ligne et retirer votre commande sur place.</p>
     @endif
     @if(config('site.address'))<p class="contact-address"><strong>Adresse</strong><br>{{ config('site.address') }}</p>@endif
-    <a class="button" href="{{ route('menu') }}">Commander en ligne <span aria-hidden="true">↗</span></a>
+    <a class="button" href="{{ route('menu') }}">Commander en ligne</a>
 </section>
 <section class="panel">
     <h2>Horaires habituels</h2>

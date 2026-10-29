@@ -23,6 +23,6 @@
 <label>Capacité personnalisée (€)<input type="number" name="amount_capacity_override" min="0" max="200000" step="0.01" value="{{ $slot['capacity_override'] === null ? '' : number_format($slot['capacity_override'] / 100, 2, '.', '') }}" placeholder="Par défaut : {{ number_format($settings->default_amount_capacity / 100, 2, ',', ' ') }} €"></label>
 <p class="muted small-hint">Vide = capacité par défaut.</p>
 <input type="hidden" name="manually_closed" value="0"><label class="checkbox-label"><input type="checkbox" name="manually_closed" value="1" @checked($slot['manually_closed'])> Fermer manuellement</label><button class="button secondary full">Enregistrer</button></form>
-<a class="text-button" href="{{ route('admin.orders', ['slot' => $slot['id'], 'date' => $date, 'view' => 'all']) }}">Voir les {{ $slot['count'] }} commandes →</a></article>
+<a class="text-button" href="{{ route('admin.orders', ['slot' => $slot['id'], 'date' => $date, 'view' => 'all']) }}">Voir les {{ $slot['count'] }} commandes</a></article>
 @empty<div class="empty-state"><h2>Pas de service ce jour-là</h2><p>Ouvrez exceptionnellement cette date dans le calendrier pour proposer des créneaux.</p></div>@endforelse
 </div></x-restaurant-layout>

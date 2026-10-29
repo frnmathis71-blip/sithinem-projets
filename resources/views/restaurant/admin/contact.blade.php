@@ -1,5 +1,5 @@
 <x-restaurant-layout title="Contact" :admin="true">
-<div class="section-heading"><div><p class="eyebrow">VOS COORDONNÉES</p><h1>Contact</h1></div><a href="{{ route('contact') }}">Voir la page Contact ↗</a></div>
+<div class="section-heading"><div><p class="eyebrow">VOS COORDONNÉES</p><h1>Contact</h1></div><a href="{{ route('contact') }}">Voir la page Contact</a></div>
 <div class="checkout-grid">
 <form class="panel" method="post" action="{{ route('admin.contact.update') }}">@csrf @method('PATCH')
 <h2>Téléphone du restaurant</h2>

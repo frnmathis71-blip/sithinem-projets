@@ -3,7 +3,7 @@
 @if($currentOrders->isNotEmpty())@include('restaurant.current-order')@endif
 <div class="home-intro" data-home-intro>
     <section class="hero">
-        <div class="hero-copy"><p class="eyebrow"><span class="little-dot"></span> VOTRE RENDEZ-VOUS GOURMAND</p><h1>Du cœur en cuisine.<br>Du bonheur <em>à emporter.</em></h1><p>Les saveurs de l’Asie, cuisinées à la commande et prêtes à l’heure que vous choisissez.</p><a class="button" href="#carte">Découvrir la carte <span aria-hidden="true">↗</span></a></div>
+        <div class="hero-copy"><p class="eyebrow"><span class="little-dot"></span> VOTRE RENDEZ-VOUS GOURMAND</p><h1>Du cœur en cuisine.<br>Du bonheur <em>à emporter.</em></h1><p>Les saveurs de l’Asie, cuisinées à la commande et prêtes à l’heure que vous choisissez.</p><a class="button" href="#carte">Découvrir la carte</a></div>
         @include('restaurant.hero-carousel')
     </section>
     <ul class="promise-strip"><li><span class="promise-icon" aria-hidden="true">✦</span><span><b>Préparé pour vous</b><small>Cuisiné à la commande</small></span></li><li><span class="promise-icon" aria-hidden="true">◷</span><span><b>Retrait sur rendez-vous</b><small>Choisissez votre créneau</small></span></li><li><span class="promise-icon" aria-hidden="true">€</span>@if(app(\App\Services\StripeCheckoutService::class)->enabled())<span><b>Paiement au choix</b><small>En ligne ou au retrait</small></span>@else<span><b>Paiement au retrait</b><small>Sur place, au restaurant</small></span>@endif</li></ul>
@@ -30,12 +30,12 @@
         <div class="empty-state"><h3>{{ $type === 'offer' ? 'De nouvelles offres se préparent' : 'La carte se prépare' }}</h3><p>{{ $type === 'offer' ? 'Découvrez nos plats et menus en attendant la prochaine occasion gourmande.' : 'Les plats seront bientôt disponibles. Revenez découvrir nos saveurs.' }}</p>@if($type === 'offer')<a class="button" href="{{ route('menu') }}">Voir la carte</a>@endif</div>
     @endforelse
     </div>
-    @if($home)<p><a class="button secondary" href="{{ route('menu') }}">Voir toute la carte →</a></p>@endif
+    @if($home)<p><a class="button secondary" href="{{ route('menu') }}">Voir toute la carte</a></p>@endif
     {{-- Inside the section so an in-place category change brings the matching options along. --}}
     @if($type === 'product')
     <script type="application/json" data-catalog-options>@json(app(\App\Services\DynamicMenuService::class)->options())</script>
     @include('restaurant.variant-dialog')
     @endif
 </section>
-<section class="bottom-cta"><div><p class="eyebrow">VOTRE SOIRÉE, EN PLUS SIMPLE</p><h2>Vous choisissez.<br>Nous cuisinons.</h2></div><p>Réservez un créneau disponible au moins 30 minutes à l’avance. Votre commande vous attendra au restaurant.</p><a class="button light" href="{{ route('cart') }}">Préparer mon retrait ↗</a></section>
+<section class="bottom-cta"><div><p class="eyebrow">VOTRE SOIRÉE, EN PLUS SIMPLE</p><h2>Vous choisissez.<br>Nous cuisinons.</h2></div><p>Réservez un créneau disponible au moins 30 minutes à l’avance. Votre commande vous attendra au restaurant.</p><a class="button light" href="{{ route('cart') }}">Préparer mon retrait</a></section>
 </x-restaurant-layout>

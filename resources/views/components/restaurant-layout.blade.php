@@ -41,7 +41,7 @@ $adminLinks = [
     </nav>
     <div class="admin-actions">
         <a @class(['button', 'small', 'admin-new-order', 'active' => request()->routeIs('admin.orders.create')]) href="{{ route('admin.orders.create') }}">+ Nouvelle commande</a>
-        <a class="admin-site-link" href="{{ route('home') }}">Voir le site →</a>
+        <a class="admin-site-link" href="{{ route('home') }}">Voir le site</a>
         <form method="post" action="{{ route('logout') }}">@csrf<button class="button secondary small" data-test="admin-logout">Se déconnecter</button></form>
     </div>
 </aside>
@@ -75,7 +75,7 @@ $adminLinks = [
     {{ $slot }}
 </main>
 @if(!$admin && ($cartCount ?? 0) > 0 && !request()->routeIs('cart', 'checkout', 'menus.show', 'menus.builder'))
-<a class="mobile-cart" href="{{ route('cart') }}"><span class="mobile-cart-count" aria-hidden="true">{{ $cartCount }}</span><span>Voir mon panier</span><span aria-hidden="true">→</span></a>
+<a class="mobile-cart" href="{{ route('cart') }}"><span class="mobile-cart-count" aria-hidden="true">{{ $cartCount }}</span><span>Voir mon panier</span></a>
 @endif
 @if($admin)
 <footer class="admin-footer"><span>Sithinem · Administration</span><a href="{{ route('home') }}">Voir le site</a></footer>
