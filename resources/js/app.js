@@ -1,4 +1,4 @@
-import './dynamic-menus';
+import { bindCatalogCards } from './dynamic-menus';
 
 const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -261,4 +261,43 @@ if (carousel) {
     }, { passive: true });
 
     schedule();
+}
+
+// Menu categories switch in place: only the menu section changes, without reloading or jumping to the top.
+// The home page keeps normal links, so its hero never sits above another page's address.
+if (document.querySelector('#carte') && location.pathname !== '/') {
+    let shownUrl = location.href.split('#')[0];
+    const switchCatalog = async (url, push) => {
+        const current = document.querySelector('#carte');
+        current.setAttribute('aria-busy', 'true');
+        try {
+            const response = await fetch(url, { headers: { Accept: 'text/html' } });
+            const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+            const next = page.querySelector('#carte');
+            if (!response.ok || !next) throw new Error();
+            const chipFocused = document.activeElement?.closest('.category-links');
+            current.replaceWith(next);
+            // Keep the header link of the page shown (La carte / Les offres) highlighted.
+            const mainNav = page.querySelector('.main-nav');
+            if (mainNav) document.querySelector('.main-nav')?.replaceWith(mainNav);
+            bindCatalogCards(next);
+            document.title = page.title;
+            shownUrl = url.split('#')[0];
+            if (push) history.pushState({ catalog: true }, '', shownUrl);
+            if (chipFocused) next.querySelector('.category-links .active')?.focus({ preventScroll: true });
+            // Bring the section back into view only when the visitor had scrolled past its top.
+            if (next.getBoundingClientRect().top < 0) next.scrollIntoView({ block: 'start' });
+        } catch {
+            location.href = url;
+        }
+    };
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('.category-links a');
+        if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.origin !== location.origin) return;
+        event.preventDefault();
+        if (link.href.split('#')[0] !== shownUrl) switchCatalog(link.href, true);
+    });
+    window.addEventListener('popstate', () => {
+        if (location.href.split('#')[0] !== shownUrl) switchCatalog(location.href, false);
+    });
 }

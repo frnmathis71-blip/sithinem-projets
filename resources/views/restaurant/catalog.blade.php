@@ -29,10 +29,11 @@
     @endforelse
     </div>
     @if($home)<p><a class="button secondary" href="{{ route('menu') }}">Voir toute la carte →</a></p>@endif
+    {{-- Inside the section so an in-place category change brings the matching options along. --}}
+    @if($type === 'product')
+    <script type="application/json" data-catalog-options>@json(app(\App\Services\DynamicMenuService::class)->options())</script>
+    @include('restaurant.variant-dialog')
+    @endif
 </section>
 <section class="bottom-cta"><div><p class="eyebrow">VOTRE SOIRÉE, EN PLUS SIMPLE</p><h2>Vous choisissez.<br>Nous cuisinons.</h2></div><p>Réservez un créneau disponible au moins 30 minutes à l’avance. Votre commande vous attendra au restaurant.</p><a class="button light" href="{{ route('cart') }}">Préparer mon retrait ↗</a></section>
-@if($type === 'product')
-<script type="application/json" data-catalog-options>@json(app(\App\Services\DynamicMenuService::class)->options())</script>
-@include('restaurant.variant-dialog')
-@endif
 </x-restaurant-layout>

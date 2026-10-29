@@ -404,7 +404,7 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .button { transition:transform var(--motion-fast) ease-out, background-color var(--motion-fast) ease-out, border-color var(--motion-fast) ease-out, box-shadow var(--motion-fast) ease-out; }
 /* Refresh adjustments: logo legibility, tablet banner, compact footer on phones. */
 .restaurant .brand-logo { width:86px; height:86px; margin:-8px 0; }
-.restaurant .catalog-section > p:last-child { margin-top:24px; }
+.restaurant .catalog-section > .product-grid + p { margin-top:24px; }
 @media (max-width:1024px) {
     .restaurant .brand-logo { width:72px; height:72px; margin:-6px 0; }
     .restaurant .category-links { flex-wrap:nowrap; overflow-x:auto; margin:0 -16px 22px; padding:2px 16px 6px; scrollbar-width:none; }

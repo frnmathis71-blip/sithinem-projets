@@ -153,10 +153,12 @@ function chooseVariant(products, onChoose, showPrice, trigger) {
     dialog.showModal();
 }
 
-const catalogData = document.querySelector('[data-catalog-options]');
-if (catalogData) {
+// Called again after the menu switches category in place, for the cards it brings.
+export function bindCatalogCards(root = document) {
+    const catalogData = root.querySelector('[data-catalog-options]');
+    if (!catalogData) return;
     const products = JSON.parse(catalogData.textContent);
-    document.querySelectorAll('form[data-product-add]').forEach(form => {
+    root.querySelectorAll('form[data-product-add]').forEach(form => {
         const genericId = Number(form.elements.id.value);
         form.addEventListener('submit', event => {
             if (form.dataset.chosen) return;
@@ -181,3 +183,5 @@ if (catalogData) {
         });
     });
 }
+
+bindCatalogCards();
