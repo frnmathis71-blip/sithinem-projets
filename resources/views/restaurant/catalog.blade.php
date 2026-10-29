@@ -1,4 +1,4 @@
-<x-restaurant-layout :title="$home ? 'Bienvenue à notre table' : 'La carte'">
+<x-restaurant-layout :title="$home ? 'Bienvenue à notre table' : (request()->routeIs('offers') ? 'Les offres' : 'La carte')">
 @if($home)
     <section class="hero">
         <div class="hero-copy"><p class="eyebrow"><span class="little-dot"></span> VOTRE RENDEZ-VOUS GOURMAND</p><h1>Du cœur en cuisine.<br>Du bonheur <em>à emporter.</em></h1><p>Les saveurs de la cuisine asiatique, à emporter chez vous. Composez votre commande, choisissez votre heure et laissez-nous faire le reste.</p><a class="button" href="#carte">Découvrir la carte <span aria-hidden="true">↗</span></a><ol class="hero-facts" aria-label="Comment commander"><li><span>1</span><b>Choisissez vos plats</b></li><li><span>2</span><b>Réservez votre retrait</b></li><li><span>3</span><b>Régalez-vous</b></li></ol></div>
@@ -7,7 +7,7 @@
     <ul class="promise-strip"><li><span class="promise-icon" aria-hidden="true">✦</span><span><b>Préparé pour vous</b><small>Cuisiné à la commande</small></span></li><li><span class="promise-icon" aria-hidden="true">◷</span><span><b>Retrait sur rendez-vous</b><small>Choisissez votre créneau</small></span></li><li><span class="promise-icon" aria-hidden="true">♡</span><span><b>Simplement gourmand</b><small>Les saveurs d’Asie</small></span></li><li><span class="promise-icon" aria-hidden="true">€</span><span><b>Paiement sur place</b><small>Rien à régler en ligne</small></span></li></ul>
 @endif
 <section id="carte" class="catalog-section">
-    <div class="section-heading"><div><p class="eyebrow">À CHAQUE ENVIE, SA SAVEUR</p><h2>{{ request()->routeIs('offers') ? 'Nos offres du moment' : ($home ? 'Les favoris de notre table' : 'Qu’est-ce qui vous fait envie ?') }}</h2></div><span class="muted">À savourer chez vous.</span></div>
+    <div class="section-heading"><div><p class="eyebrow">À CHAQUE ENVIE, SA SAVEUR</p>@php($heading = $home ? 'h2' : 'h1')<{{ $heading }}>{{ request()->routeIs('offers') ? 'Nos offres du moment' : ($home ? 'Les favoris de notre table' : 'Qu’est-ce qui vous fait envie ?') }}</{{ $heading }}></div><span class="muted">À savourer chez vous.</span></div>
     @include('restaurant.catalog-navigation')
     <div class="product-grid">
     @forelse($items as $item)

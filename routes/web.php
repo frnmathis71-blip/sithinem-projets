@@ -46,12 +46,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RequireAdmin::class]
     Route::get('/menus-personnalisables/nouveau', [DynamicMenuController::class, 'editRule'])->name('menu-rules.create');
     Route::get('/menus-personnalisables/{rule}', [DynamicMenuController::class, 'editRule'])->whereNumber('rule')->name('menu-rules.edit');
     Route::post('/menus-personnalisables/{rule?}', [DynamicMenuController::class, 'saveRule'])->whereNumber('rule')->name('menu-rules.save');
-    Route::view('/confidentialite', 'restaurant.legal.privacy')->name('privacy');
-    Route::view('/cgu', 'restaurant.legal.terms')->name('terms');
-    Route::view('/cookies', 'restaurant.legal.cookies')->name('cookies');
-    Route::post('/cookies', [SiteController::class, 'consent'])->middleware('throttle:20,1')->name('cookies.save');
-    Route::get('/sitemap.xml', [SiteController::class, 'sitemap'])->name('sitemap');
-    Route::get('/robots.txt', [SiteController::class, 'robots']);
 
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/statistiques', [AdminController::class, 'dashboard'])->name('statistics');
