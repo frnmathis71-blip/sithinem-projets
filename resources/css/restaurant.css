@@ -775,3 +775,8 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .order-edit-body { display:grid; gap:22px; margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
 .restaurant .order-edit-body h3 { font-size:1.05rem; }
 .restaurant .order-edit-body .cart-row { padding:12px 0; }
+
+/* Phones: the hero goes straight to the menu, without the three promise cards. */
+@media (max-width:600px) {
+    .restaurant .home-intro .promise-strip { display:none; }
+}
