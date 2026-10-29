@@ -519,6 +519,8 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .staff-steps li.done span { background:#4f8a5b; }
 .restaurant .staff-client { border:0; padding:16px; margin:6px 0 10px; border-radius:14px; background:var(--soft); }
 .restaurant .staff-client legend { float:left; width:100%; margin-bottom:8px; font-weight:700; font-size:1.05rem; }
+/* The client fields form a grid, which would otherwise squeeze beside the full-width floated legend. */
+.restaurant .staff-client legend + * { clear:both; }
 .restaurant .staff-client select, .restaurant .staff-client input { margin-bottom:8px!important; }
 .restaurant .staff-legend { margin:18px 0 0; font-weight:700; font-size:1.05rem; }
 
