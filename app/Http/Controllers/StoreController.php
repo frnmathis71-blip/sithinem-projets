@@ -63,7 +63,26 @@ class StoreController extends Controller
             $items = $this->currentOffers($catalog)->concat(app(FeaturedProductService::class)->select($items->filter(fn ($item) => $item instanceof Product)));
         }
 
-        return view('restaurant.catalog', ['items' => $items, 'categories' => Category::query()->orderBy('position')->get(), 'type' => $type, 'catalog' => $catalog, 'home' => $request->routeIs('home'), 'slides' => $request->routeIs('home') ? $this->heroSlides($catalog) : []]);
+        return view('restaurant.catalog', ['items' => $items, 'categories' => Category::query()->orderBy('position')->get(), 'type' => $type, 'catalog' => $catalog, 'home' => $request->routeIs('home'), 'slides' => $request->routeIs('home') ? $this->heroSlides($catalog) : [], 'currentOrders' => $request->routeIs('home') ? $this->currentOrders($request) : collect()]);
+    }
+
+    /**
+     * The customer's orders still on their way (awaiting payment, received, accepted or ready), next pickup first.
+     * Shown at the top of the home page until the order is completed or cancelled.
+     *
+     * @return Collection<int, Order>
+     */
+    private function currentOrders(Request $request): Collection
+    {
+        if (! $request->user()) {
+            return collect();
+        }
+        $today = CarbonImmutable::now(RestaurantSetting::query()->findOrFail(1)->timezone)->format('Y-m-d');
+
+        return Order::query()->with('slot')->where('user_id', $request->user()->id)->where('source', 'online')
+            ->whereIn('status', [...Order::ACTIVE, 'awaiting_payment'])
+            ->whereHas('slot', fn ($q) => $q->whereDate('date', '>=', $today))->get()
+            ->sortBy(fn (Order $order) => $order->slot->date->format('Y-m-d').' '.$order->slot->starts_at)->values();
     }
 
     /**

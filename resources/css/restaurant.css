@@ -751,3 +751,20 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .order-add-item select { flex:1 1 240px; margin:0; }
 .restaurant .order-reschedule .inline-form select { flex:1 1 200px; margin:0; }
 .restaurant .slot-option.current-slot { border-style:dashed; }
+
+/* Order on its way, at the top of the home page. */
+.restaurant .current-order { display:flex; align-items:center; gap:16px; margin:0 0 20px; padding:14px 18px; border:1px solid #d4dec7; border-left:5px solid var(--ink); border-radius:var(--radius); background:var(--soft); box-shadow:var(--shadow-sm); animation:card-rise .35s var(--motion-ease) both; }
+.restaurant .current-order.is-ready { border-left-color:#4f8a5b; background:#e6f1e4; }
+.restaurant .current-order.is-waiting { border-left-color:var(--orange); background:#fbf1e8; }
+.restaurant .current-order-icon { display:grid; place-items:center; flex:none; width:40px; height:40px; border-radius:50%; background:var(--ink); color:#fff; font-weight:700; }
+.restaurant .current-order.is-ready .current-order-icon { background:#4f8a5b; }
+.restaurant .current-order.is-waiting .current-order-icon { background:var(--orange); }
+.restaurant .current-order-text { flex:1; min-width:0; }
+.restaurant .current-order-text p { margin:0; font-size:.9rem; }
+.restaurant .current-order-title { display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; margin-bottom:2px !important; }
+.restaurant .current-order-title .badge { padding:3px 10px; }
+.restaurant .current-order .button { flex:none; border-radius:999px; }
+@media (max-width:600px) {
+    .restaurant .current-order { flex-wrap:wrap; padding:14px; }
+    .restaurant .current-order .button { width:100%; }
+}

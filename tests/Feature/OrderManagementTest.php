@@ -117,3 +117,23 @@ test('a pickup cannot be moved to a slot that has already started', function () 
     expect(fn () => app(OrderService::class)->reschedule($this->order, $this->admin, $started->id))->toThrow(ValidationException::class);
     expect($this->order->fresh()->time_slot_id)->toBe($this->friday->id);
 });
+
+test('the home page shows the order on its way at the top, until it is completed', function () {
+    $this->get(route('home'))->assertOk()->assertDontSee('Votre commande en cours');
+
+    $this->actingAs($this->client)->get(route('home'))->assertOk()
+        ->assertSeeInOrder(['Votre commande en cours', 'Commande #'.$this->order->id, 'Reçue', 'Retrait aujourd’hui à', 'Suivre ma commande', 'VOTRE RENDEZ-VOUS GOURMAND'])
+        ->assertSee('data-order-tracking', false);
+
+    app(OrderService::class)->changeStatus($this->order, $this->admin, 'ready');
+    $this->get(route('home'))->assertSee('vous pouvez venir la retirer');
+
+    app(OrderService::class)->changeStatus($this->order, $this->admin, 'completed');
+    $this->get(route('home'))->assertDontSee('Votre commande en cours');
+});
+
+test('the order banner belongs to its customer only', function () {
+    $this->actingAs(User::factory()->create())->get(route('home'))->assertDontSee('Votre commande en cours');
+    app(OrderService::class)->placeForStaff($this->admin, $this->friday->id, '0611223344', (string) Str::uuid(), ['product:'.$this->nems->id => 1], 'Client au téléphone', 'phone', 650);
+    $this->actingAs($this->admin)->get(route('home'))->assertDontSee('Votre commande en cours');
+});

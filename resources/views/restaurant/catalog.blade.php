@@ -1,5 +1,6 @@
 <x-restaurant-layout :title="$home ? 'Bienvenue à notre table' : (request()->routeIs('offers') ? 'Les offres' : 'La carte')">
 @if($home)
+@if($currentOrders->isNotEmpty())@include('restaurant.current-order')@endif
 <div class="home-intro" data-home-intro>
     <section class="hero">
         <div class="hero-copy"><p class="eyebrow"><span class="little-dot"></span> VOTRE RENDEZ-VOUS GOURMAND</p><h1>Du cœur en cuisine.<br>Du bonheur <em>à emporter.</em></h1><p>Les saveurs de l’Asie, cuisinées à la commande et prêtes à l’heure que vous choisissez.</p><a class="button" href="#carte">Découvrir la carte <span aria-hidden="true">↗</span></a></div>
