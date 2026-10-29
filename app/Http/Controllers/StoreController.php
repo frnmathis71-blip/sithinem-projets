@@ -18,6 +18,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -57,10 +58,24 @@ class StoreController extends Controller
 
         $items = $query->orderBy('name')->get();
         if ($request->routeIs('home') && $type === 'product') {
-            $items = app(FeaturedProductService::class)->select($items->filter(fn ($item) => $item instanceof Product));
+            // Current offers come first, limited-time ones ahead, then the most ordered dishes.
+            $items = $this->currentOffers($catalog)->concat(app(FeaturedProductService::class)->select($items->filter(fn ($item) => $item instanceof Product)));
         }
 
         return view('restaurant.catalog', ['items' => $items, 'categories' => Category::query()->orderBy('position')->get(), 'type' => $type, 'catalog' => $catalog, 'home' => $request->routeIs('home'), 'slides' => $request->routeIs('home') ? $this->heroSlides($catalog) : []]);
+    }
+
+    /**
+     * Offers available right now: limited-time ones first, ending soonest, then the permanent ones by name.
+     *
+     * @return Collection<int, Offer>
+     */
+    private function currentOffers(CatalogService $catalog): Collection
+    {
+        return Offer::query()->where('available', true)->where('starts_at', '<=', now())
+            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+            ->orderByRaw('ends_at is null')->orderBy('ends_at')->orderBy('name')->get()
+            ->filter(fn (Offer $offer) => $catalog->available($offer))->values();
     }
 
     /**
@@ -73,9 +88,7 @@ class StoreController extends Controller
         $price = fn (int $cents, bool $from = false) => ($from ? 'À partir de ' : '').number_format($cents / 100, 2, ',', ' ').' €';
         $image = fn (?string $path) => $path ? Storage::disk('public')->url($path) : null;
         $slides = [];
-        $offers = Offer::query()->where('available', true)->where('starts_at', '<=', now())
-            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))->orderBy('name')->get();
-        foreach ($offers->filter(fn (Offer $offer) => $catalog->available($offer))->take(3) as $offer) {
+        foreach ($this->currentOffers($catalog)->take(3) as $offer) {
             $slides[] = ['label' => 'Offre du moment', 'name' => $offer->name, 'price' => $price($offer->price), 'image' => $image($offer->image), 'url' => route('offers').'#carte'];
         }
         $chef = Category::query()->where('code', 'chef_main')->value('id');

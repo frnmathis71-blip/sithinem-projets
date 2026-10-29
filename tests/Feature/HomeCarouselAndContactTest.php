@@ -56,3 +56,16 @@ test('clients cannot change the restaurant phone number', function () {
     $this->get(route('admin.contact'))->assertForbidden();
     $this->patch(route('admin.contact.update'), ['contact_phone' => '0600000000'])->assertForbidden();
 });
+
+test('the home favourites list current offers first, limited-time ones ahead, then the dishes', function () {
+    $nems = Product::create(['name' => 'Nems maison', 'price' => 650, 'category_id' => Category::create(['name' => 'Plat du chef', 'code' => 'chef_main'])->id]);
+    foreach (['Offre permanente' => null, 'Offre de la semaine' => now()->addWeek(), 'Offre du soir' => now()->addHours(5)] as $name => $ends) {
+        $offer = Offer::create(['name' => $name, 'price' => 1200, 'available' => true, 'starts_at' => now()->subDay(), 'ends_at' => $ends]);
+        DB::table('offer_items')->insert(['offer_id' => $offer->id, 'product_id' => $nems->id, 'quantity' => 2]);
+    }
+
+    $this->get(route('home'))->assertOk()
+        ->assertSeeInOrder(['Les favoris de notre table', 'Offre du soir', 'Offre de la semaine', 'Offre permanente', 'Ajouter Nems maison au panier'])
+        ->assertSee('name="type" value="offer"', false)
+        ->assertSeeInOrder(['>Tout voir</a>', '>Offres</a>', '>Plat du chef</a>'], false);
+});
