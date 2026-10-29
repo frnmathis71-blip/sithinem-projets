@@ -3,6 +3,7 @@
 use App\Http\Controllers\DynamicMenuController;
 use App\Models\Category;
 use App\Models\MenuRule;
+use App\Models\Offer;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\CatalogService;
@@ -12,6 +13,7 @@ use App\Services\OrderService;
 use App\Services\SlotService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -107,4 +109,18 @@ test('home ranks ordered units across variants and menus with chef fallback and 
     } finally {
         CarbonImmutable::setTestNow();
     }
+});
+
+test('"Tout voir" lists the offers first, then each category in the menu order, drinks always last', function () {
+    $drink = Category::create(['name' => 'Boisson', 'code' => 'drink', 'position' => 0]);
+    $chef = Category::create(['name' => 'Plat du chef', 'code' => 'chef_main', 'position' => 1]);
+    $starter = Category::create(['name' => 'Entrée', 'code' => 'starter', 'position' => 2]);
+    Product::create(['name' => 'Aaa thé glacé', 'price' => 300, 'category_id' => $drink->id]);
+    Product::create(['name' => 'Bo bun', 'price' => 1200, 'category_id' => $chef->id]);
+    $nems = Product::create(['name' => 'Nems', 'price' => 650, 'category_id' => $starter->id]);
+    $offer = Offer::create(['name' => 'Duo du soir', 'price' => 1500, 'available' => true, 'starts_at' => now()->subDay()]);
+    DB::table('offer_items')->insert(['offer_id' => $offer->id, 'product_id' => $nems->id, 'quantity' => 2]);
+
+    $this->get(route('menu'))->assertOk()->assertSeeInOrder(['Ajouter Duo du soir', 'Ajouter Bo bun', 'Ajouter Nems', 'Ajouter Aaa thé glacé']);
+    $this->get(route('menu', ['category' => $drink->id]))->assertOk()->assertSee('Aaa thé glacé')->assertDontSee('Ajouter Duo du soir');
 });

@@ -139,7 +139,7 @@ test('offer can create an exclusive product with no end date', function () {
     expect($offer->ends_at)->toBeNull()->and($product->offer_only)->toBeTrue();
     $catalog = app(CatalogService::class);
     expect($catalog->available($offer, CarbonImmutable::parse('2027-01-01')))->toBeTrue()->and($catalog->available($product))->toBeFalse();
-    $this->get('/menu')->assertDontSee('Dessert exclusif');
+    $this->get('/menu')->assertDontSee('Ajouter Dessert exclusif au panier');
     $this->get('/offres')->assertOk()->assertSee('Dessert exclusif');
     $this->post(route('cart.update'), ['type' => 'product', 'id' => $product->id, 'quantity' => 1])->assertSessionHasErrors('cart');
     expect(fn () => $catalog->quote(['product:'.$product->id => 1]))->toThrow(ValidationException::class);

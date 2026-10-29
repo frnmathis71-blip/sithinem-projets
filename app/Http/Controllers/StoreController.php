@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CatalogItem;
 use App\Models\Category;
 use App\Models\Offer;
 use App\Models\Order;
@@ -62,8 +63,17 @@ class StoreController extends Controller
             // Current offers come first, limited-time ones ahead, then the most ordered dishes.
             $items = $this->currentOffers($catalog)->concat(app(FeaturedProductService::class)->select($items->filter(fn ($item) => $item instanceof Product)));
         }
+        $categories = Category::query()->orderBy('position')->get();
+        if ($request->routeIs('menu') && $type === 'product' && ! $request->filled('category')) {
+            // "Tout voir" follows the category chips: offers, then each category in its order, drinks always last.
+            $order = $categories->values()->mapWithKeys(fn (Category $category, int $index) => [$category->id => $category->getAttribute('code') === 'drink' ? PHP_INT_MAX : $index]);
+            $items = $this->currentOffers($catalog)->concat($items->sortBy([
+                fn (CatalogItem $a, CatalogItem $b) => ($order[$a->getAttribute('category_id')] ?? PHP_INT_MAX - 1) <=> ($order[$b->getAttribute('category_id')] ?? PHP_INT_MAX - 1),
+                fn (CatalogItem $a, CatalogItem $b) => $a->name <=> $b->name,
+            ])->values());
+        }
 
-        return view('restaurant.catalog', ['items' => $items, 'categories' => Category::query()->orderBy('position')->get(), 'type' => $type, 'catalog' => $catalog, 'home' => $request->routeIs('home'), 'slides' => $request->routeIs('home') ? $this->heroSlides($catalog) : [], 'currentOrders' => $request->routeIs('home') ? $this->currentOrders($request) : collect()]);
+        return view('restaurant.catalog', ['items' => $items, 'categories' => $categories, 'type' => $type, 'catalog' => $catalog, 'home' => $request->routeIs('home'), 'slides' => $request->routeIs('home') ? $this->heroSlides($catalog) : [], 'currentOrders' => $request->routeIs('home') ? $this->currentOrders($request) : collect()]);
     }
 
     /**
