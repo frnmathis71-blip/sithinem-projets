@@ -15,11 +15,13 @@
 @foreach($lines as $line)
     <div class="cart-row"><div><h3>{{ $line['name'] }}</h3><p>{{ number_format($line['price'] / 100, 2, ',', ' ') }} € / unité</p>
     @foreach($line['composition'] as $part)<small>{{ $part['name'] }}{{ !$loop->last ? ' · ' : '' }}</small>@endforeach
+    @if($line['item']?->weekdayLabel())<span class="badge weekday">{{ $line['item']->weekdayLabel() }}</span>@endif
     @if(!$line['available'])<span class="badge danger">Indisponible — à retirer et recomposer</span>@endif</div>
     <form method="post" action="{{ route('cart.update') }}" class="inline-form">@csrf <x-spam-trap /><input type="hidden" name="key" value="{{ $line['key'] }}"><label><span class="sr-only">Quantité de {{ $line['name'] }}</span><input class="quantity" type="number" name="quantity" min="0" max="50" value="{{ $line['quantity'] }}"></label><button class="button small secondary">Mettre à jour</button><button class="text-button" name="quantity" value="0" aria-label="Retirer {{ $line['name'] }}">Retirer</button></form><strong>{{ number_format($line['price'] * $line['quantity'] / 100, 2, ',', ' ') }} €</strong></div>
 @endforeach
 <div class="total-row"><span>Total</span><strong>{{ number_format($total / 100, 2, ',', ' ') }} €</strong></div><p class="payment-note">Paiement sur place lors du retrait.</p></section>
 <section class="panel"><p class="eyebrow">{{ $staffOrder ? 'CLIENT ET RETRAIT' : 'VOTRE RENDEZ-VOUS' }}</p><h2>{{ $staffOrder ? 'Retrait du client' : 'Choisir mon retrait' }}</h2><p class="muted">Créneaux de 20 minutes · 30 minutes de préparation minimum.</p>
+@if($weekdays === [])<div class="notice error" role="alert">Les articles de votre panier ne sont pas proposés le même jour de la semaine. Retirez-en un pour choisir une date de retrait.</div>@elseif($weekdays !== null)<p class="notice">Votre panier contient des articles proposés uniquement certains jours : seules les dates compatibles sont affichées.</p>@endif
 <form method="get" action="{{ route($staffOrder ? 'admin.orders.create' : 'cart') }}" class="date-form"><label for="pickup-date">Date de retrait</label><div class="inline-form"><select id="pickup-date" name="date" required @disabled(!$bookingDates)>@forelse($bookingDates as $day)<option value="{{ $day['date'] }}" @selected($date === $day['date'])>{{ $day['label'] }}</option>@empty<option>Aucune date ouverte</option>@endforelse</select><button class="button secondary small">Afficher</button></div></form>
 <form method="post" action="{{ route($staffOrder ? 'admin.orders.store' : 'orders.store') }}" data-checkout>@csrf <x-spam-trap /><input type="hidden" name="idempotency_key" value="{{ session('checkout_key') }}">
 @if($staffOrder)

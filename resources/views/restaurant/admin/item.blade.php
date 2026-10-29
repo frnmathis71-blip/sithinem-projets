@@ -16,6 +16,13 @@
                 <label class="checkbox-label"><input type="checkbox" name="offer_only" value="1" @checked(old('offer_only', $item->offer_only ?? false))> Réserver ce produit aux offres</label>
                 <p class="muted">Il ne sera pas vendu seul ni inclus dans un menu classique. Ce choix s’applique aussi à ses déclinaisons.</p>
             @endif
+            @php($limitDays = (bool) old('limit_weekdays', $item->weekdays() !== null))
+            <input type="hidden" name="limit_weekdays" value="0">
+            <label class="checkbox-label"><input type="checkbox" name="limit_weekdays" value="1" data-weekday-toggle @checked($limitDays)> Valable uniquement certains jours</label>
+            <fieldset class="weekday-picker" data-weekday-days @if(!$limitDays) hidden @endif><legend>Jours de retrait possibles</legend>
+                @foreach(\App\Models\CatalogItem::WEEKDAYS as $number => $day)<label class="weekday-chip"><input type="checkbox" name="available_weekdays[]" value="{{ $number }}" @checked(in_array($number, old('available_weekdays', $item->weekdays() ?? [])))><span>{{ ucfirst($day) }}</span></label>@endforeach
+                <p class="muted">{{ $kind === 'offer' ? 'L’offre' : 'Le plat' }} reste visible sur la carte avec la mention « Uniquement le … », mais ne peut être retiré que ces jours-là.@if($kind === 'product') Ce choix s’applique aussi aux déclinaisons.@endif</p>
+            </fieldset>
             <label>Photo · JPG, PNG ou WebP · 20 Mo maximum · compression automatique<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
             @if($item->image)<img class="edit-image" src="{{ Storage::disk('public')->url($item->image) }}" alt="Photo actuelle"><label class="checkbox-label"><input type="checkbox" name="remove_image" value="1"> Retirer la photo</label>@endif
             <button class="button full">Enregistrer {{ ['product' => 'le plat', 'menu' => 'le menu', 'offer' => 'l’offre'][$kind] }}</button>

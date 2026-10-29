@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\MenuRule;
 use App\Models\Product;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -52,7 +53,7 @@ class DynamicMenuService
     }
 
     /** @return array<string, mixed> */
-    public function quote(string $key, int $quantity): array
+    public function quote(string $key, int $quantity, ?CarbonImmutable $pickup = null): array
     {
         $data = $this->decode($key);
         $selections = $data['selections'];
@@ -68,7 +69,7 @@ class DynamicMenuService
                 continue;
             }
             $product = Product::query()->find($selections[$code]);
-            if (! $product || ! $catalog->productAvailable($product) || $product->categoryCode() !== $code) {
+            if (! $product || ! $catalog->productAvailable($product, false, $pickup) || $product->categoryCode() !== $code) {
                 $this->invalid();
             }
             $products[$code] = $product;

@@ -39,6 +39,12 @@ class Product extends CatalogItem
         return $this->variant_label ? $this->name.' — '.$this->variant_label : $this->name;
     }
 
+    /** Variants follow the days chosen on their parent dish. */
+    public function weekdays(): ?array
+    {
+        return $this->parent_id !== null && $this->parent ? $this->parent->weekdays() : parent::weekdays();
+    }
+
     public function categoryCode(): ?string
     {
         return Category::query()->whereKey(($this->parent ?? $this)->getAttribute('category_id'))->value('code');

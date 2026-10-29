@@ -693,3 +693,14 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .contact-hours .closed { color:var(--muted); }
 .restaurant .contact-hours .closed dd { font-weight:400; }
 @media (max-width:800px) { .restaurant .contact-grid { grid-template-columns:minmax(0,1fr); } }
+
+/* Optional weekday limit on dishes and offers. */
+.restaurant .weekday-picker { border:0; padding:0; margin:0 0 16px; display:flex; flex-wrap:wrap; gap:8px; }
+.restaurant .weekday-picker legend { width:100%; margin-bottom:8px; font-size:.82rem; font-weight:500; }
+.restaurant .weekday-picker .muted { flex-basis:100%; margin:4px 0 0; }
+.restaurant .weekday-chip { position:relative; margin:0; }
+.restaurant .weekday-chip input { position:absolute; opacity:0; }
+.restaurant .weekday-chip span { display:inline-flex; align-items:center; min-height:40px; padding:6px 14px; border:1px solid var(--line); border-radius:999px; background:var(--surface); cursor:pointer; font-size:.85rem; }
+.restaurant .weekday-chip input:checked + span { background:var(--ink); border-color:var(--ink); color:#fff; }
+.restaurant .weekday-chip input:focus-visible + span { outline:3px solid var(--orange); outline-offset:2px; }
+.restaurant .badge.weekday { background:#fbefd6; color:#7d5200; }

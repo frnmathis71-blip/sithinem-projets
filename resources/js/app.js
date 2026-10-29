@@ -186,6 +186,15 @@ const syncEndDate = () => {
 };
 noEndDate?.addEventListener('change', syncEndDate);
 syncEndDate();
+const weekdayToggle = document.querySelector('[data-weekday-toggle]');
+const syncWeekdays = () => {
+    if (!weekdayToggle) return;
+    const days = document.querySelector('[data-weekday-days]');
+    days.hidden = !weekdayToggle.checked;
+    days.querySelectorAll('input').forEach((input) => { input.disabled = !weekdayToggle.checked; });
+};
+weekdayToggle?.addEventListener('change', syncWeekdays);
+syncWeekdays();
 
 // The home intro fills the rest of the window, whatever the height of the banner and header above it.
 const homeIntro = document.querySelector('[data-home-intro]');

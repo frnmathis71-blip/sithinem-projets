@@ -81,7 +81,7 @@ class StoreController extends Controller
     /**
      * Current offers and chef dishes shown in the home carousel, after the welcome illustration.
      *
-     * @return list<array{label: string, name: string, price: string, image: string|null, url: string}>
+     * @return list<array{label: string, days: string|null, name: string, price: string, image: string|null, url: string}>
      */
     private function heroSlides(CatalogService $catalog): array
     {
@@ -89,7 +89,7 @@ class StoreController extends Controller
         $image = fn (?string $path) => $path ? Storage::disk('public')->url($path) : null;
         $slides = [];
         foreach ($this->currentOffers($catalog)->take(3) as $offer) {
-            $slides[] = ['label' => 'Offre du moment', 'name' => $offer->name, 'price' => $price($offer->price), 'image' => $image($offer->image), 'url' => route('offers').'#carte'];
+            $slides[] = ['label' => 'Offre du moment', 'days' => $offer->weekdayLabel(), 'name' => $offer->name, 'price' => $price($offer->price), 'image' => $image($offer->image), 'url' => route('offers').'#carte'];
         }
         $chef = Category::query()->where('code', 'chef_main')->value('id');
         $dishes = $chef ? Product::query()->where('available', true)->whereNull('parent_id')->where('offer_only', false)
@@ -100,7 +100,7 @@ class StoreController extends Controller
                 continue;
             }
             $photo = $dish->image ?: ($dish->has_variants ? $dish->variants->first(fn (Product $v) => $v->available && $v->image)?->image : null);
-            $slides[] = ['label' => 'Plat du chef', 'name' => $dish->name, 'price' => $price($dish->price, $dish->has_variants), 'image' => $image($photo), 'url' => route('menu', ['category' => $chef]).'#carte'];
+            $slides[] = ['label' => 'Plat du chef', 'days' => $dish->weekdayLabel(), 'name' => $dish->name, 'price' => $price($dish->price, $dish->has_variants), 'image' => $image($photo), 'url' => route('menu', ['category' => $chef]).'#carte'];
         }
 
         return $slides;
@@ -109,13 +109,14 @@ class StoreController extends Controller
     public function cart(Request $request, CatalogService $catalog, SlotService $slots): View|RedirectResponse
     {
         $settings = RestaurantSetting::query()->findOrFail(1);
-        $date = $this->date($request, $settings);
-        $bookingDates = $slots->bookingDates($settings);
-        if ($date !== null && ! in_array($date, array_column($bookingDates, 'date'), true)) {
-            return redirect()->route('cart')->withErrors(['date' => 'Cette journée n’est pas ouverte à la réservation.']);
-        }
         /** @var array<string, int> $cart */
         $cart = $request->session()->get('cart', []);
+        $weekdays = $catalog->cartWeekdays($cart);
+        $bookingDates = $this->bookingDates($slots, $settings, $weekdays);
+        $date = $this->date($request, $settings, $bookingDates);
+        if ($date !== null && ! in_array($date, array_column($bookingDates, 'date'), true)) {
+            return redirect()->route('cart')->withErrors(['date' => $weekdays === null ? 'Cette journée n’est pas ouverte à la réservation.' : 'Votre panier ne peut pas être retiré ce jour-là.']);
+        }
         $lines = [];
         $total = 0;
         foreach ($cart as $key => $quantity) {
@@ -140,7 +141,7 @@ class StoreController extends Controller
             $request->session()->put('checkout_key', (string) Str::uuid());
         }
 
-        return view('restaurant.cart', ['lines' => $lines, 'total' => $total, 'date' => $date, 'slots' => $date ? $slots->forDate($date, $total) : [], 'settings' => $settings, 'bookingDates' => $bookingDates]);
+        return view('restaurant.cart', ['lines' => $lines, 'total' => $total, 'date' => $date, 'slots' => $date ? $slots->forDate($date, $total) : [], 'settings' => $settings, 'bookingDates' => $bookingDates, 'weekdays' => $weekdays]);
     }
 
     public function updateCart(Request $request, CatalogService $catalog): RedirectResponse
@@ -192,8 +193,8 @@ class StoreController extends Controller
     public function slots(Request $request, SlotService $slots): JsonResponse
     {
         $settings = RestaurantSetting::query()->findOrFail(1);
-        $date = $this->date($request, $settings);
-        $bookingDates = $slots->bookingDates($settings);
+        $bookingDates = $this->bookingDates($slots, $settings, app(CatalogService::class)->cartWeekdays($request->session()->get('cart', [])));
+        $date = $this->date($request, $settings, $bookingDates);
 
         return response()->json(['slots' => $date && in_array($date, array_column($bookingDates, 'date'), true) ? $slots->forDate($date, $this->cartAmount($request)) : [], 'dates' => $bookingDates])->header('Cache-Control', 'no-store');
     }
@@ -267,7 +268,8 @@ class StoreController extends Controller
         }
     }
 
-    private function date(Request $request, RestaurantSetting $settings): ?string
+    /** @param  array<int, array{date: string}>  $bookingDates */
+    private function date(Request $request, RestaurantSetting $settings, array $bookingDates): ?string
     {
         $today = CarbonImmutable::now($settings->timezone)->startOfDay();
         $request->validate(['date' => ['sometimes', 'required', 'date_format:Y-m-d', 'after_or_equal:'.$today->format('Y-m-d'), 'before_or_equal:'.$today->addDays(SlotService::HORIZON)->format('Y-m-d')]]);
@@ -275,6 +277,19 @@ class StoreController extends Controller
             return $request->string('date')->toString();
         }
 
-        return app(SlotService::class)->bookingDates($settings)[0]['date'] ?? null;
+        return $bookingDates[0]['date'] ?? null;
+    }
+
+    /**
+     * Opening days offered for pickup, keeping only the weekdays every item of the cart allows.
+     *
+     * @param  list<int>|null  $weekdays
+     * @return array<int, array{date: string, label: string}>
+     */
+    private function bookingDates(SlotService $slots, RestaurantSetting $settings, ?array $weekdays): array
+    {
+        $dates = $slots->bookingDates($settings);
+
+        return $weekdays === null ? $dates : array_values(array_filter($dates, fn (array $day) => in_array(CarbonImmutable::parse($day['date'])->isoWeekday(), $weekdays, true)));
     }
 }

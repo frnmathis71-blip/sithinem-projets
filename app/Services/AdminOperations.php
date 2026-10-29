@@ -169,7 +169,17 @@ class AdminOperations
             $rules['offer_product.price'] = ['required', $money];
             $rules['offer_product.quantity'] = 'required|integer|min:1|max:50';
         }
-        $data = $request->validate($rules);
+        $rules['limit_weekdays'] = 'sometimes|boolean';
+        $rules['available_weekdays'] = 'exclude_unless:limit_weekdays,1|required|array|min:1|max:7';
+        $rules['available_weekdays.*'] = 'integer|distinct|between:1,7';
+        $data = $request->validate($rules, ['available_weekdays.required' => 'Cochez au moins un jour, ou désactivez la limitation par jour.']);
+        // Optional and off by default: without it the item is sold every day.
+        $days = $request->boolean('limit_weekdays') ? array_map('intval', $data['available_weekdays'] ?? []) : [];
+        sort($days);
+        unset($data['limit_weekdays'], $data['available_weekdays']);
+        if (in_array($kind, ['product', 'offer'], true)) {
+            $data['available_weekdays'] = $days === [] ? null : $days;
+        }
         if (isset($data['price'])) {
             $data['price'] = $catalog->cents($data['price']);
         }
