@@ -780,3 +780,14 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width:600px) {
     .restaurant .home-intro .promise-strip { display:none; }
 }
+
+/* Dishes that come with a side: two clear choices instead of a small link. */
+.restaurant .product-bottom.has-choice { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.restaurant .product-bottom.has-choice > strong { grid-column:1 / -1; }
+.restaurant .product-bottom.has-choice form, .restaurant .product-bottom.has-choice .button { width:100%; margin:0; }
+.restaurant .product-bottom.has-choice .button { white-space:normal; text-align:center; line-height:1.25; }
+.restaurant .product-bottom .button.secondary { background:var(--surface); color:var(--ink); border-color:var(--ink); }
+.restaurant .product-bottom .button.secondary:hover { background:var(--soft); color:var(--ink); }
+@media (max-width:600px) {
+    .restaurant .product-bottom.has-choice { grid-template-columns:minmax(0,1fr); gap:6px; }
+}
