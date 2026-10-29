@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\MenuRule;
+use App\Models\RestaurantSetting;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class SiteController extends Controller
 {
@@ -23,10 +26,18 @@ class SiteController extends Controller
         return back()->withCookie(cookie('site_cookie_choice', 'v1:'.$data['choice'], 60 * 24 * 180, '/', null, $request->isSecure(), true, false, 'lax'));
     }
 
+    public function contact(): View
+    {
+        return view('restaurant.contact', [
+            'settings' => RestaurantSetting::query()->findOrFail(1),
+            'weekly' => DB::table('opening_hours')->orderBy('weekday')->get(),
+        ]);
+    }
+
     public function sitemap(): Response
     {
         $base = $this->origin();
-        $paths = ['/', '/menu', '/menus', '/offres', '/confidentialite', '/cgu', '/cookies'];
+        $paths = ['/', '/menu', '/menus', '/offres', '/contact', '/confidentialite', '/cgu', '/cookies'];
         foreach (MenuRule::query()->where('visible', true)->where('available', true)->pluck('id') as $id) {
             $paths[] = '/menus/'.$id;
         }

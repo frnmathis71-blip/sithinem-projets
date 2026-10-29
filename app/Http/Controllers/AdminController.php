@@ -99,6 +99,19 @@ class AdminController extends Controller
         return back()->with('success', 'Capacité par défaut mise à jour pour les créneaux sans personnalisation.');
     }
 
+    public function contact(): View
+    {
+        return view('restaurant.admin.contact', ['settings' => RestaurantSetting::query()->findOrFail(1)]);
+    }
+
+    public function saveContact(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['contact_phone' => ['nullable', 'string', 'regex:/^\+?[0-9][0-9 .()\-]{7,24}$/']], ['contact_phone.regex' => 'Saisissez un numéro de téléphone valide, par exemple 01 23 45 67 89.']);
+        RestaurantSetting::query()->whereKey(1)->update(['contact_phone' => isset($data['contact_phone']) ? trim($data['contact_phone']) : null]);
+
+        return back()->with('success', 'Coordonnées enregistrées. Elles sont visibles sur la page Contact.');
+    }
+
     public function calendar(Request $request): View
     {
         $calendar = app(AdminOperations::class)->calendar($request);

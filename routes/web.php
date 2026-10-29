@@ -17,6 +17,7 @@ Route::view('/cookies', 'restaurant.legal.cookies')->name('cookies');
 Route::post('/cookies', [SiteController::class, 'consent'])->middleware('throttle:20,1')->name('cookies.save');
 Route::get('/sitemap.xml', [SiteController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [SiteController::class, 'robots']);
+Route::get('/contact', [SiteController::class, 'contact'])->name('contact');
 
 Route::get('/', [StoreController::class, 'catalog'])->name('home');
 Route::get('/menu', [StoreController::class, 'catalog'])->name('menu');
@@ -64,6 +65,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RequireAdmin::class]
     Route::patch('/creneaux/{slot}', [AdminController::class, 'saveSlot'])->name('slots.update');
     Route::patch('/parametres', [AdminController::class, 'settings'])->name('settings');
     Route::get('/calendrier', [AdminController::class, 'calendar'])->name('calendar');
+    Route::get('/contact', [AdminController::class, 'contact'])->name('contact');
+    Route::patch('/contact', [AdminController::class, 'saveContact'])->name('contact.update');
     Route::post('/horaires', [AdminController::class, 'saveHours'])->name('hours');
     Route::post('/exceptions', [AdminController::class, 'saveException'])->name('exceptions');
     Route::delete('/exceptions/{exception}', [AdminController::class, 'deleteException'])->name('exceptions.delete');

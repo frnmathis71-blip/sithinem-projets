@@ -194,3 +194,69 @@ if (homeIntro) {
     fit();
     window.addEventListener('resize', fit);
 }
+
+// Home carousel: turns every 5 seconds, pauses on hover, focus, hidden tab or on request.
+const carousel = document.querySelector('[data-hero-carousel]');
+if (carousel) {
+    const slides = [...carousel.querySelectorAll('.hero-slide')];
+    const dots = [...carousel.querySelectorAll('[data-carousel-dot]')];
+    const pauseButton = carousel.querySelector('[data-carousel-pause]');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let active = 0;
+    let timer = null;
+    let paused = reducedMotion;
+    let held = false;
+
+    const show = (index, direction = 1) => {
+        if (index === active) return;
+        const current = slides[active];
+        const next = slides[index];
+        // Place the incoming slide on the side it comes from, without animating that jump.
+        next.classList.add('no-transition');
+        next.classList.remove('from-left', 'from-right');
+        next.classList.add(direction > 0 ? 'from-right' : 'from-left');
+        void next.offsetWidth;
+        next.classList.remove('no-transition', 'from-left', 'from-right');
+        next.classList.add('is-active');
+        next.inert = false;
+        current.classList.remove('is-active', 'from-left', 'from-right');
+        current.classList.add(direction > 0 ? 'from-left' : 'from-right');
+        current.inert = true;
+        dots.forEach((dot, i) => (i === index ? dot.setAttribute('aria-current', 'true') : dot.removeAttribute('aria-current')));
+        active = index;
+    };
+    const schedule = () => {
+        clearInterval(timer);
+        timer = paused || held || document.hidden ? null : setInterval(() => show((active + 1) % slides.length), 5000);
+    };
+    const setPaused = (value) => {
+        paused = value;
+        carousel.toggleAttribute('data-paused', paused);
+        pauseButton.setAttribute('aria-label', paused ? 'Reprendre le défilement' : 'Mettre en pause le défilement');
+        schedule();
+    };
+
+    dots.forEach((dot, i) => dot.addEventListener('click', () => {
+        show(i, i > active ? 1 : -1);
+        schedule();
+    }));
+    pauseButton.addEventListener('click', () => setPaused(!paused));
+    // Hovering or focusing a slide holds it, so a link never moves away under the pointer.
+    carousel.addEventListener('pointerenter', (event) => { if (event.pointerType === 'mouse') { held = true; schedule(); } });
+    carousel.addEventListener('pointerleave', () => { held = false; schedule(); });
+    carousel.addEventListener('focusin', () => { held = true; schedule(); });
+    carousel.addEventListener('focusout', (event) => { if (!carousel.contains(event.relatedTarget)) { held = false; schedule(); } });
+    document.addEventListener('visibilitychange', schedule);
+
+    let touchX = null;
+    carousel.addEventListener('touchstart', (event) => { touchX = event.touches[0].clientX; }, { passive: true });
+    carousel.addEventListener('touchend', (event) => {
+        const distance = touchX === null ? 0 : event.changedTouches[0].clientX - touchX;
+        touchX = null;
+        if (Math.abs(distance) < 40) return;
+        show((active + (distance < 0 ? 1 : -1) + slides.length) % slides.length, distance < 0 ? 1 : -1);
+        schedule();
+    }, { passive: true });
+
+    setPaused(paused);
+}

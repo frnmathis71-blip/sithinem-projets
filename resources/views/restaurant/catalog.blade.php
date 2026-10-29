@@ -3,7 +3,7 @@
 <div class="home-intro" data-home-intro>
     <section class="hero">
         <div class="hero-copy"><p class="eyebrow"><span class="little-dot"></span> VOTRE RENDEZ-VOUS GOURMAND</p><h1>Du cœur en cuisine.<br>Du bonheur <em>à emporter.</em></h1><p>Les saveurs de l’Asie, cuisinées à la commande et prêtes à l’heure que vous choisissez.</p><a class="button" href="#carte">Découvrir la carte <span aria-hidden="true">↗</span></a></div>
-        <div class="hero-art" aria-hidden="true"><div class="art-ring"></div><div class="plate"><div class="food-leaf leaf-one"></div><div class="food-leaf leaf-two"></div><div class="nem nem-one"></div><div class="nem nem-two"></div><div class="nem nem-three"></div><div class="sauce"><span></span></div></div></div>
+        @include('restaurant.hero-carousel')
     </section>
     <ul class="promise-strip"><li><span class="promise-icon" aria-hidden="true">✦</span><span><b>Préparé pour vous</b><small>Cuisiné à la commande</small></span></li><li><span class="promise-icon" aria-hidden="true">◷</span><span><b>Retrait sur rendez-vous</b><small>Choisissez votre créneau</small></span></li><li><span class="promise-icon" aria-hidden="true">€</span><span><b>Paiement sur place</b><small>Rien à régler en ligne</small></span></li></ul>
 </div>

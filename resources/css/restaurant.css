@@ -642,3 +642,54 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
     .restaurant .home-intro .hero-art { height:380px; }
     .restaurant .home-intro .plate { transform:rotate(-24deg) scale(.82); }
 }
+
+/* Home carousel: the slides share one grid cell and turn in 3D; only transform and opacity move. */
+.restaurant .hero-carousel { --arch:48% 48% 8px 8px; position:relative; min-width:0; }
+.restaurant .hero-slides { display:grid; perspective:1600px; }
+.restaurant .hero-slide { grid-area:1 / 1; min-width:0; opacity:0; backface-visibility:hidden; transition:transform 650ms var(--motion-ease), opacity 400ms ease-out; }
+.restaurant .hero-slide.is-active { opacity:1; transform:none; z-index:1; }
+.restaurant .hero-slide.from-right { transform:translateX(30%) rotateY(-60deg) scale(.9); }
+.restaurant .hero-slide.from-left { transform:translateX(-30%) rotateY(60deg) scale(.9); }
+.restaurant .hero-slide.no-transition { transition:none; }
+.restaurant .hero-carousel .hero-art { border-radius:var(--arch); }
+.restaurant .hero-slide-link { position:relative; display:block; height:100%; overflow:hidden; border-radius:var(--arch); background:#e3e6cf; box-shadow:var(--shadow-md); color:var(--ink); text-decoration:none; }
+.restaurant .hero-slide-link:hover { color:var(--ink); }
+.restaurant .hero-slide-link img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.restaurant .hero-slide-link:has(.is-placeholder) { background:#ecefdf; }
+.restaurant .hero-slide-link img.is-placeholder { object-fit:contain; padding:10% 4% 32%; }
+.restaurant .hero-slide-caption { position:absolute; left:16px; right:16px; bottom:60px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:2px 12px; padding:14px 18px; border-radius:14px; background:rgb(255 253 248 / 94%); box-shadow:var(--shadow-sm); }
+.restaurant .hero-slide-caption .eyebrow { grid-column:1 / -1; margin:0; color:var(--orange); }
+.restaurant .hero-slide-caption strong { grid-column:1 / -1; font-size:1.3rem; line-height:1.25; letter-spacing:-.03em; }
+.restaurant .hero-slide-price { font-weight:600; }
+.restaurant .hero-slide-more { color:var(--orange); font-size:.86rem; font-weight:600; }
+.restaurant .hero-carousel-controls { position:absolute; left:50%; bottom:14px; z-index:2; display:flex; align-items:center; gap:2px; padding:4px 8px; border-radius:999px; background:rgb(255 253 248 / 88%); box-shadow:var(--shadow-sm); transform:translateX(-50%); }
+.restaurant .hero-carousel-dot { display:grid; place-items:center; width:24px; height:28px; padding:0; border:0; background:none; cursor:pointer; }
+.restaurant .hero-carousel-dot::before { content:''; width:8px; height:8px; border-radius:999px; background:#9baa91; transition:width var(--motion-normal) var(--motion-ease), background-color var(--motion-fast) ease-out; }
+.restaurant .hero-carousel-dot[aria-current="true"]::before { width:22px; background:var(--ink); }
+.restaurant .hero-carousel-dot[aria-current="true"] { width:38px; }
+.restaurant .hero-carousel-pause { display:grid; place-items:center; width:28px; height:28px; margin-right:2px; padding:0; border:0; border-radius:50%; background:none; color:var(--ink); cursor:pointer; }
+.restaurant .hero-carousel-pause:hover { background:var(--soft); }
+.restaurant .hero-carousel-pause svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.restaurant .hero-carousel-pause .icon-play, .restaurant [data-paused] .hero-carousel-pause .icon-pause { display:none; }
+.restaurant [data-paused] .hero-carousel-pause .icon-play { display:inline; fill:currentColor; }
+@media (max-width:800px) {
+    .restaurant .hero-carousel { --arch:140px 140px 8px 8px; margin-top:15px; }
+    .restaurant .hero-carousel .hero-art { margin-top:0; }
+}
+@media (max-width:480px) {
+    .restaurant .hero-slide-caption { left:10px; right:10px; bottom:54px; padding:10px 14px; }
+    .restaurant .hero-slide-caption strong { font-size:1.1rem; }
+}
+
+/* Contact page. */
+.restaurant .contact-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:24px; align-items:start; }
+.restaurant .contact-phone { display:inline-flex; align-items:center; gap:12px; margin:4px 0 18px; font-size:clamp(1.6rem, 4vw, 2.2rem); font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums; color:var(--ink); text-decoration:none; }
+.restaurant .contact-phone svg { flex:none; width:44px; height:44px; padding:10px; border-radius:50%; background:var(--orange); fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.restaurant .contact-phone:hover { color:var(--orange); }
+.restaurant .contact-address { color:var(--ink)!important; }
+.restaurant .contact-hours { margin:0 0 16px; }
+.restaurant .contact-hours div { display:flex; justify-content:space-between; gap:16px; padding:10px 0; border-bottom:1px solid var(--line); font-size:.92rem; }
+.restaurant .contact-hours dd { margin:0; font-weight:600; font-variant-numeric:tabular-nums; }
+.restaurant .contact-hours .closed { color:var(--muted); }
+.restaurant .contact-hours .closed dd { font-weight:400; }
+@media (max-width:800px) { .restaurant .contact-grid { grid-template-columns:minmax(0,1fr); } }

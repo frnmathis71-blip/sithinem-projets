@@ -28,6 +28,7 @@ $adminLinks = [
     ['route' => 'admin.slots', 'label' => 'Créneaux & capacité', 'active' => ['admin.slots*'], 'icon' => 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18z'],
     ['route' => 'admin.calendar', 'label' => 'Calendrier', 'active' => ['admin.calendar'], 'icon' => 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4'],
     ['route' => 'admin.statistics', 'label' => 'Statistiques', 'active' => ['admin.statistics'], 'icon' => 'M5 20V11M10 20V5M15 20v-8M20 20v-4'],
+    ['route' => 'admin.contact', 'label' => 'Contact', 'active' => ['admin.contact*'], 'icon' => 'M6 3h3l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 4 5a2 2 0 0 1 2-2z'],
 ];
 @endphp
 {{-- Left sidebar on computers, compact top bar on tablets and phones. --}}
@@ -52,6 +53,7 @@ $adminLinks = [
         <a href="{{ route('home') }}" @class(['active' => request()->routeIs('home')])>Accueil</a>
         <a href="{{ route('menu') }}" @class(['active' => request()->routeIs('menu')])>La carte</a>
         <a href="{{ route('offers') }}" @class(['active' => request()->routeIs('offers')])>Les offres</a>
+        <a href="{{ route('contact') }}" @class(['active' => request()->routeIs('contact')])>Contact</a>
         @auth
             <a href="{{ route('orders.index') }}">Mes commandes</a>
             <a href="{{ route('account') }}">Mon compte</a>
@@ -79,7 +81,7 @@ $adminLinks = [
 @else
 <footer class="site-footer">
     <div class="footer-intro"><a class="footer-brand" href="{{ route('home') }}"><img src="{{ asset('images/sithinem-logo.png') }}" alt="Sithinem Traiteur" width="72" height="72" loading="lazy"></a><p>Les saveurs d’Asie, cuisinées avec cœur et à emporter.</p></div>
-    <nav class="footer-links" aria-label="Découvrir"><strong>Découvrir</strong><a href="{{ route('menu') }}">La carte</a><a href="{{ route('menus.index') }}">Nos menus</a><a href="{{ route('offers') }}">Les offres</a></nav>
+    <nav class="footer-links" aria-label="Découvrir"><strong>Découvrir</strong><a href="{{ route('menu') }}">La carte</a><a href="{{ route('menus.index') }}">Nos menus</a><a href="{{ route('offers') }}">Les offres</a><a href="{{ route('contact') }}">Contact</a></nav>
     <div class="footer-links"><strong>Votre retrait</strong><span>Retrait sur rendez-vous</span><span>Commande au moins 30 min à l’avance</span><span>Paiement sur place lors du retrait</span></div>
     <nav class="footer-links" aria-label="Informations légales"><strong>Informations</strong><a href="{{ route('privacy') }}">Confidentialité / RGPD</a><a href="{{ route('terms') }}">CGU</a><a href="{{ route('cookies') }}">Gérer les cookies</a></nav>
     <p class="footer-copy">© {{ date('Y') }} Sithinem · Traiteur asiatique</p>

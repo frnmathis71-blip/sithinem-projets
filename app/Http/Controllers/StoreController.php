@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Offer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\RestaurantSetting;
@@ -18,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -58,7 +60,37 @@ class StoreController extends Controller
             $items = app(FeaturedProductService::class)->select($items->filter(fn ($item) => $item instanceof Product));
         }
 
-        return view('restaurant.catalog', ['items' => $items, 'categories' => Category::query()->orderBy('position')->get(), 'type' => $type, 'catalog' => $catalog, 'home' => $request->routeIs('home')]);
+        return view('restaurant.catalog', ['items' => $items, 'categories' => Category::query()->orderBy('position')->get(), 'type' => $type, 'catalog' => $catalog, 'home' => $request->routeIs('home'), 'slides' => $request->routeIs('home') ? $this->heroSlides($catalog) : []]);
+    }
+
+    /**
+     * Current offers and chef dishes shown in the home carousel, after the welcome illustration.
+     *
+     * @return list<array{label: string, name: string, price: string, image: string|null, url: string}>
+     */
+    private function heroSlides(CatalogService $catalog): array
+    {
+        $price = fn (int $cents, bool $from = false) => ($from ? 'À partir de ' : '').number_format($cents / 100, 2, ',', ' ').' €';
+        $image = fn (?string $path) => $path ? Storage::disk('public')->url($path) : null;
+        $slides = [];
+        $offers = Offer::query()->where('available', true)->where('starts_at', '<=', now())
+            ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))->orderBy('name')->get();
+        foreach ($offers->filter(fn (Offer $offer) => $catalog->available($offer))->take(3) as $offer) {
+            $slides[] = ['label' => 'Offre du moment', 'name' => $offer->name, 'price' => $price($offer->price), 'image' => $image($offer->image), 'url' => route('offers').'#carte'];
+        }
+        $chef = Category::query()->where('code', 'chef_main')->value('id');
+        $dishes = $chef ? Product::query()->where('available', true)->whereNull('parent_id')->where('offer_only', false)
+            ->where('category_id', $chef)->with('variants')->orderBy('name')->get() : collect();
+        foreach ($dishes as $dish) {
+            $available = $dish->has_variants ? $dish->variants->contains(fn (Product $variant) => $catalog->available($variant)) : $catalog->available($dish);
+            if (! $available || count($slides) >= 6) {
+                continue;
+            }
+            $photo = $dish->image ?: ($dish->has_variants ? $dish->variants->first(fn (Product $v) => $v->available && $v->image)?->image : null);
+            $slides[] = ['label' => 'Plat du chef', 'name' => $dish->name, 'price' => $price($dish->price, $dish->has_variants), 'image' => $image($photo), 'url' => route('menu', ['category' => $chef]).'#carte'];
+        }
+
+        return $slides;
     }
 
     public function cart(Request $request, CatalogService $catalog, SlotService $slots): View|RedirectResponse
