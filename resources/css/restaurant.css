@@ -768,3 +768,10 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
     .restaurant .current-order { flex-wrap:wrap; padding:14px; }
     .restaurant .current-order .button { width:100%; }
 }
+.restaurant .order-edit > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0; font-size:1.05rem; font-weight:700; color:var(--ink); list-style:none; }
+.restaurant .order-edit > summary::-webkit-details-marker { display:none; }
+.restaurant .order-edit > summary::after { content:'Ouvrir ▾'; padding:6px 14px; border:1px solid var(--line); border-radius:999px; background:var(--surface); font-size:.8rem; font-weight:600; }
+.restaurant .order-edit[open] > summary::after { content:'Fermer ▴'; }
+.restaurant .order-edit-body { display:grid; gap:22px; margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+.restaurant .order-edit-body h3 { font-size:1.05rem; }
+.restaurant .order-edit-body .cart-row { padding:12px 0; }

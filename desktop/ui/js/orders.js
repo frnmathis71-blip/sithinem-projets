@@ -25,11 +25,10 @@ async function openOrder(id, onChange) {
     // Next step of the order: received, accepted, ready, completed.
     const next = { received: ['preparing', 'Accepter la commande', 'Commande acceptée.'], preparing: ['ready', 'Marquer comme prête', 'Commande prête.'], ready: ['completed', 'Terminée', 'Commande terminée.'] }[order.status];
     if (next) actions.push(h('button', { class: 'button primary', type: 'button', onclick: (event) => action(event.currentTarget, 'PATCH', '/orders/' + order.id + '/status', { json: { status: next[0] } }, next[2]) }, icon('check'), next[1]));
-    if (!order.paid && order.status !== 'cancelled') actions.push(h('button', { class: 'button', type: 'button', onclick: (event) => action(event.currentTarget, 'POST', '/orders/' + order.id + '/paid', undefined, 'Encaissement enregistré.') }, 'Encaisser ' + money(order.total)));
     actions.push(h('button', { class: 'button', type: 'button', onclick: (event) => printTicket(order, event.currentTarget) }, icon('printer'), 'Imprimer le ticket'));
     fill(body, 
       h('div', { class: 'order-head' }, h('div', {}, h('p', { class: 'eyebrow', text: order.number }), h('h3', { class: 'customer', text: order.customer_name })),
-        h('div', { class: 'pills' }, pill(order.status_label, statusKind(order.status)), pill(order.paid ? 'Encaissée' : 'À encaisser', order.paid ? 'ok' : ''), pill(order.source_label))),
+        h('div', { class: 'pills' }, pill(order.status_label, statusKind(order.status)), pill(order.paid ? 'Payée' : 'Paiement sur place', order.paid ? 'ok' : ''), pill(order.source_label))),
       h('dl', { class: 'facts' },
         h('div', {}, h('dt', { text: 'Retrait' }), h('dd', { text: frenchDate(order.slot.date) + ' à ' + order.slot.start })),
         h('div', {}, h('dt', { text: 'Téléphone' }), h('dd', { class: 'num', text: order.phone }))),
@@ -39,7 +38,7 @@ async function openOrder(id, onChange) {
       order.history ? h('section', {}, h('h4', { text: 'Suivi' }), h('ol', { class: 'timeline' }, order.history.map((step) => h('li', {}, h('strong', { text: step.label }), h('span', { text: step.at }))))) : null,
       h('div', { class: 'danger-zone' },
         ['received', 'preparing', 'ready'].includes(order.status) ? h('button', { class: 'link danger', type: 'button', onclick: async (event) => { if (await confirmBox('Annuler la commande #' + order.id + ' de ' + order.customer_name + ' ? Le montant du créneau sera libéré.', 'Annuler la commande', true)) action(event.target, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'cancelled' } }, 'Commande annulée.'); } }, 'Annuler la commande') : null,
-        order.status === 'cancelled' ? h('button', { class: 'link', type: 'button', onclick: (event) => action(event.target, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'received' } }, 'Commande rétablie.') }, 'Rétablir la commande') : null,
+        order.status === 'cancelled' ? h('button', { class: 'link', type: 'button', onclick: (event) => action(event.target, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'preparing' } }, 'Commande rétablie.') }, 'Rétablir la commande') : null,
         h('button', { class: 'link', type: 'button', onclick: async (event) => { const ticket = await busy(event.target, () => api('GET', '/orders/' + order.id + '/ticket')); if (ticket) body.append(h('pre', { class: 'ticket', text: ticket.text })); } }, 'Aperçu du ticket')));
   }
   try { render((await api('GET', '/orders/' + id)).order); }
@@ -103,7 +102,7 @@ registerView('orders', {
       const totals = data.orders.reduce((sum, order) => sum + (order.status !== 'cancelled' ? order.total : 0), 0);
       return h('section', { class: 'panel' }, h('h2', { text: 'Ce service' }),
         h('div', { class: 'metric' }, h('span', { text: 'Commandes affichées' }), h('strong', { class: 'num', text: data.orders.length })),
-        h('div', { class: 'metric' }, h('span', { text: 'À encaisser' }), h('strong', { class: 'num', text: data.orders.filter((order) => !order.paid && order.status !== 'cancelled').length })),
+        h('div', { class: 'metric' }, h('span', { text: 'À payer sur place' }), h('strong', { class: 'num', text: data.orders.filter((order) => !order.paid && order.status !== 'cancelled').length })),
         h('div', { class: 'metric' }, h('span', { text: 'Montant' }), h('strong', { class: 'num', text: money(totals) })),
         check('Son pour les nouvelles commandes', { checked: store('sound') !== false, onchange: (event) => store('sound', event.target.checked) }),
         h('button', { class: 'button small', type: 'button', onclick: () => App.chime() }, 'Tester le son'));

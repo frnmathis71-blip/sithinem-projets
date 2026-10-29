@@ -102,10 +102,13 @@ test('the board, status, payment and tickets follow the web rules', function () 
     $this->withToken($token)->getJson(route('desktop.orders', ['date' => '2026-09-18']))->assertOk()->assertJsonPath('orders.0.id', $id)->assertJsonPath('orders.0.items.0.quantity', 2);
     $this->withToken($token)->getJson(route('desktop.orders.ticket', $id))->assertOk()->assertJsonPath('title', 'Sithinem #'.$id);
     $this->withToken($token)->postJson(route('desktop.orders.paid', $id))->assertOk()->assertJsonPath('order.paid', true);
-    $this->withToken($token)->patchJson(route('desktop.orders.status', $id), ['status' => 'completed'])->assertOk()->assertJsonPath('order.status', 'completed');
+    $this->withToken($token)->patchJson(route('desktop.orders.status', $id), ['status' => 'completed'])->assertUnprocessable();
+    foreach (['preparing', 'ready', 'completed'] as $status) {
+        $this->withToken($token)->patchJson(route('desktop.orders.status', $id), ['status' => $status])->assertOk()->assertJsonPath('order.status', $status);
+    }
     $this->withToken($token)->patchJson(route('desktop.orders.status', $id), ['status' => 'cancelled'])->assertUnprocessable();
     $this->withToken($token)->getJson(route('desktop.orders', ['date' => '2026-09-18', 'view' => 'history']))->assertJsonCount(1, 'orders');
-    $this->withToken($token)->getJson(route('desktop.orders.show', $id))->assertJsonCount(2, 'order.history');
+    $this->withToken($token)->getJson(route('desktop.orders.show', $id))->assertJsonCount(4, 'order.history');
     $this->withToken($token)->getJson(route('desktop.statistics'))->assertOk()->assertJsonStructure(['report' => ['periods', 'chart'], 'waiting']);
 });
 

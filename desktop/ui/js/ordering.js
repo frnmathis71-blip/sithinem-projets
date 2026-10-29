@@ -223,7 +223,6 @@ registerView('take-order', {
         h('p', { text: order.customer_name + ' · retrait ' + frenchDate(order.slot.date) + ' à ' + order.slot.start }),
         h('p', { class: 'num big-total', text: money(order.total) }),
         h('div', { class: 'stack' },
-          !order.paid ? h('button', { class: 'button primary full', type: 'button', onclick: async (event) => { const paid = await busy(event.currentTarget, () => api('POST', '/orders/' + order.id + '/paid'), 'Encaissement enregistré.'); if (paid) { done = paid.order; renderDone(); } } }, 'Encaisser maintenant · ' + money(order.total)) : pill('Encaissée', 'ok'),
           h('button', { class: 'button full', type: 'button', onclick: (event) => printTicket(order, event.currentTarget) }, icon('printer'), 'Imprimer le ticket'),
           h('button', { class: 'button full', type: 'button', onclick: () => openOrder(order.id) }, 'Voir la commande'),
           h('button', { class: 'button full', type: 'button', onclick: () => { done = null; parts = null; renderCart(); } }, icon('plus'), 'Nouvelle commande'))));

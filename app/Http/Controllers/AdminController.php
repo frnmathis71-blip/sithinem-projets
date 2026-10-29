@@ -93,13 +93,6 @@ class AdminController extends Controller
         return redirect()->route('admin.orders.show', $order)->with('success', $changed ? 'Heure de retrait modifiée. Le client est prévenu.' : 'La commande était déjà sur ce créneau.');
     }
 
-    public function paid(Order $order): RedirectResponse
-    {
-        app(AdminOperations::class)->markPaid($order);
-
-        return back()->with('success', 'Paiement sur place enregistré.');
-    }
-
     public function slots(Request $request, SlotService $slots): View
     {
         $request->validate(['date' => 'sometimes|required|date_format:Y-m-d']);

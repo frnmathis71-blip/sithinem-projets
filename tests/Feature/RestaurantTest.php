@@ -82,8 +82,10 @@ test('service board defaults to today and completed orders move to history', fun
     $tomorrow = app(SlotService::class)->forDate('2026-09-19')[0]['id'];
     $future = app(OrderService::class)->place($this->client, $tomorrow, '0612345678', (string) Str::uuid(), $this->cart);
     $this->actingAs($this->admin)->get('/admin')->assertOk()->assertSee('data-order="'.$order->id.'"', false)->assertDontSee('data-order="'.$future->id.'"', false)->assertSee('Se déconnecter');
-    $this->get(route('admin.orders.show', $order))->assertSee('Terminé')->assertSee('Nems');
-    $this->patch(route('admin.orders.status', $order), ['status' => 'completed'])->assertSessionHasNoErrors();
+    $this->get(route('admin.orders.show', $order))->assertSee('Accepter la commande')->assertDontSee('Terminer · retirée')->assertSee('Nems');
+    foreach (['preparing', 'ready', 'completed'] as $status) {
+        $this->patch(route('admin.orders.status', $order), ['status' => $status])->assertSessionHasNoErrors();
+    }
     $this->get('/admin')->assertDontSee('data-order="'.$order->id.'"', false);
     $this->get(route('admin.orders', ['view' => 'history']))->assertSee('data-order="'.$order->id.'"', false);
     $this->getJson(route('admin.feed'))->assertJsonPath('preparing', 0)->assertJsonPath('date', '2026-09-18');
@@ -266,17 +268,17 @@ test('cancellation releases capacity and reactivation cannot overbook', function
     $order = restaurantPlace($this);
     app(OrderService::class)->changeStatus($order, $this->admin, 'cancelled');
     restaurantPlace($this);
-    expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, 'received'))->toThrow(ValidationException::class);
+    expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, 'preparing'))->toThrow(ValidationException::class);
     expect($order->fresh()->status)->toBe('cancelled');
 });
 
 test('collected orders continue consuming capacity and all transitions are recorded', function () {
     $order = restaurantPlace($this);
-    foreach (['completed'] as $status) {
+    foreach (['preparing', 'ready', 'completed'] as $status) {
         app(OrderService::class)->changeStatus($order, $this->admin, $status);
     }
     expect(app(SlotService::class)->describe($this->slot, RestaurantSetting::find(1))['count'])->toBe(1);
-    expect(DB::table('order_status_histories')->count())->toBe(2);
+    expect(DB::table('order_status_histories')->count())->toBe(4);
     expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, 'preparing'))->toThrow(ValidationException::class);
 });
 
@@ -408,15 +410,22 @@ test('web push encrypts and signs the payload and records successful delivery wi
     expect($history)->toHaveCount(1);
 });
 
-test('paid action is idempotent and refuses cancelled orders', function () {
+test('orders move one step at a time, never back to received, and the website has no cash-in button', function () {
     $order = restaurantPlace($this);
-    $this->actingAs($this->admin)->post(route('admin.orders.paid', $order))->assertRedirect();
-    $paidAt = $order->fresh()->paid_at;
-    $this->post(route('admin.orders.paid', $order))->assertRedirect();
-    expect($order->fresh()->paid_at->eq($paidAt))->toBeTrue();
-    $other = restaurantPlace($this);
-    app(OrderService::class)->changeStatus($other, $this->admin, 'cancelled');
-    $this->post(route('admin.orders.paid', $other))->assertUnprocessable();
+    $this->actingAs($this->admin)->get(route('admin.orders.show', $order))->assertOk()->assertDontSee('encaissement')
+        ->assertSee('Modifier la commande')->assertDontSee('<details class="panel order-edit" open', false);
+    foreach (['ready', 'completed'] as $skipped) {
+        expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, $skipped))->toThrow(ValidationException::class);
+    }
+    app(OrderService::class)->changeStatus($order, $this->admin, 'preparing');
+    expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, 'received'))->toThrow(ValidationException::class);
+    expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, 'completed'))->toThrow(ValidationException::class);
+    $this->get(route('admin.orders.show', $order))->assertSee('Marquer comme prête')->assertDontSee('Terminer · retirée');
+    app(OrderService::class)->changeStatus($order, $this->admin, 'ready');
+    $this->get(route('admin.orders.show', $order))->assertSee('Terminer · retirée');
+    app(OrderService::class)->changeStatus($order, $this->admin, 'cancelled');
+    app(OrderService::class)->changeStatus($order, $this->admin, 'preparing');
+    expect($order->fresh()->status)->toBe('preparing');
 });
 
 test('amount capacity admits many small orders but rejects a large order before the ceiling is reached', function () {

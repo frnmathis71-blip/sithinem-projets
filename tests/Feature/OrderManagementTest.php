@@ -43,7 +43,9 @@ test('a new order is received, then the restaurant accepts it, marks it ready an
 });
 
 test('the customer follows the progress of the order from their account', function () {
-    $this->actingAs($this->admin)->patch(route('admin.orders.status', $this->order), ['status' => 'ready']);
+    foreach (['preparing', 'ready'] as $status) {
+        $this->actingAs($this->admin)->patch(route('admin.orders.status', $this->order), ['status' => $status]);
+    }
 
     $this->actingAs($this->client)->get(route('orders.show', $this->order))->assertOk()
         ->assertSee('SUIVI EN DIRECT')->assertSee('aria-current="step"', false)->assertSee('vous pouvez venir la retirer')
@@ -56,7 +58,7 @@ test('the customer follows the progress of the order from their account', functi
 
 test('the restaurant adds and removes articles, and the total follows', function () {
     $this->actingAs($this->admin)->get(route('admin.orders.show', $this->order))->assertOk()
-        ->assertSee('AJOUTER UN ARTICLE')->assertSee('data-confirm', false)->assertSee('Changer l’heure de retrait');
+        ->assertSee('Modifier la commande')->assertSee('AJOUTER UN ARTICLE')->assertSee('data-confirm', false)->assertSee('Heure de retrait');
 
     $this->post(route('admin.orders.items.add', $this->order), ['item' => 'product:'.$this->rice->id, 'quantity' => 2])->assertSessionHasNoErrors();
     $this->post(route('admin.orders.items.add', $this->order), ['item' => 'product:'.$this->nems->id, 'quantity' => 1])->assertSessionHasNoErrors();
@@ -78,7 +80,9 @@ test('the restaurant adds and removes articles, and the total follows', function
 test('only an order in progress can be edited, and only by the restaurant', function () {
     $this->actingAs($this->client)->post(route('admin.orders.items.add', $this->order), ['item' => 'product:'.$this->rice->id, 'quantity' => 1])->assertForbidden();
 
-    app(OrderService::class)->changeStatus($this->order, $this->admin, 'completed');
+    foreach (['preparing', 'ready', 'completed'] as $status) {
+        app(OrderService::class)->changeStatus($this->order, $this->admin, $status);
+    }
     expect(fn () => app(OrderService::class)->addItem($this->order, $this->admin, 'product:'.$this->rice->id, 1))->toThrow(ValidationException::class);
     expect(fn () => app(OrderService::class)->reschedule($this->order, $this->admin, $this->saturday->id))->toThrow(ValidationException::class);
 });
@@ -125,6 +129,7 @@ test('the home page shows the order on its way at the top, until it is completed
         ->assertSeeInOrder(['Votre commande en cours', 'Commande #'.$this->order->id, 'Reçue', 'Retrait aujourd’hui à', 'Suivre ma commande', 'VOTRE RENDEZ-VOUS GOURMAND'])
         ->assertSee('data-order-tracking', false);
 
+    app(OrderService::class)->changeStatus($this->order, $this->admin, 'preparing');
     app(OrderService::class)->changeStatus($this->order, $this->admin, 'ready');
     $this->get(route('home'))->assertSee('vous pouvez venir la retirer');
 

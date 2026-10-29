@@ -52,9 +52,10 @@ test('staff checkout reuses the cart without SMS and records the customer and ac
     $this->post(route('admin.orders.store'), $this->data)->assertSessionHasNoErrors();
     expect(Order::count())->toBe(1);
     $this->get(route('admin.orders.show', $order))->assertOk()->assertSee('Téléphone');
-    $this->post(route('admin.orders.paid', $order))->assertRedirect();
-    $this->patch(route('admin.orders.status', $order), ['status' => 'completed'])->assertRedirect();
-    expect($order->fresh()->paid_at)->not->toBeNull()->and($order->fresh()->status)->toBe('completed');
+    foreach (['preparing', 'ready', 'completed'] as $status) {
+        $this->patch(route('admin.orders.status', $order), ['status' => $status])->assertRedirect();
+    }
+    expect($order->fresh()->status)->toBe('completed');
 });
 
 test('staff orders cannot bypass changed prices or closed capacity', function () {

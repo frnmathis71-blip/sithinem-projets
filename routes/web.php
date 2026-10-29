@@ -65,7 +65,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RequireAdmin::class]
     Route::post('/commandes/{order}/articles', [AdminController::class, 'addItem'])->name('orders.items.add');
     Route::delete('/commandes/{order}/articles/{item}', [AdminController::class, 'removeItem'])->whereNumber('item')->name('orders.items.remove');
     Route::patch('/commandes/{order}/retrait', [AdminController::class, 'reschedule'])->name('orders.reschedule');
-    Route::post('/commandes/{order}/encaissement', [AdminController::class, 'paid'])->name('orders.paid');
     Route::get('/creneaux', [AdminController::class, 'slots'])->name('slots');
     Route::patch('/creneaux/{slot}', [AdminController::class, 'saveSlot'])->name('slots.update');
     Route::patch('/parametres', [AdminController::class, 'settings'])->name('settings');

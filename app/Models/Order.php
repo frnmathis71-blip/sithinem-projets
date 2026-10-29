@@ -43,14 +43,17 @@ class Order extends Model
         'completed' => 'Commande retirée. Bon appétit !',
     ];
 
-    /** Where the restaurant may move an order from each status. */
+    /**
+     * Where the restaurant may move an order from each status: one step forward at a time, never back to "received";
+     * a ready or completed order can step back once to correct a mistake, a cancelled one comes back accepted.
+     */
     public const TRANSITIONS = [
         'awaiting_payment' => ['cancelled'],
-        'received' => ['preparing', 'ready', 'completed', 'cancelled'],
-        'preparing' => ['received', 'ready', 'completed', 'cancelled'],
-        'ready' => ['preparing', 'completed', 'cancelled'],
+        'received' => ['preparing', 'cancelled'],
+        'preparing' => ['ready', 'cancelled'],
+        'ready' => ['completed', 'preparing', 'cancelled'],
         'completed' => ['ready'],
-        'cancelled' => ['received'],
+        'cancelled' => ['preparing'],
     ];
 
     public function isActive(): bool
