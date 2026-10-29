@@ -721,3 +721,33 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .payment-pending { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 20px; }
 .restaurant .payment-pending p { margin:0; max-width:620px; }
 .restaurant .badge.status-awaiting_payment { background:#e5ecf6; color:#2f4f7a; }
+
+/* Order progress: received, accepted, ready, completed. */
+.restaurant .order-steps { list-style:none; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:0; margin:14px 0 18px; counter-reset:step; }
+.restaurant .order-steps li { display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; font-size:.78rem; color:var(--muted); position:relative; }
+.restaurant .order-steps li span { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; border:2px solid var(--line); background:var(--surface); font-weight:700; font-size:.8rem; z-index:1; }
+.restaurant .order-steps li:not(:first-child)::before { content:''; position:absolute; top:14px; right:50%; width:100%; height:2px; background:var(--line); }
+.restaurant .order-steps li.done, .restaurant .order-steps li.current { color:var(--ink); font-weight:600; }
+.restaurant .order-steps li.done span { background:#4f8a5b; border-color:#4f8a5b; color:#fff; }
+.restaurant .order-steps li.current span { background:var(--ink); border-color:var(--ink); color:#fff; }
+.restaurant .order-steps li.done::before, .restaurant .order-steps li.current::before { background:#4f8a5b; }
+.restaurant .order-tracking { margin-bottom:24px; }
+.restaurant .order-tracking .order-steps { max-width:620px; }
+.restaurant .order-tracking-message { margin:0; font-size:.95rem; color:var(--ink); }
+.restaurant .status-actions { display:grid; gap:8px; margin-bottom:10px; }
+.restaurant .status-actions form { margin:0; }
+.restaurant .badge.status-received { background:#fbefd6; color:#7d5200; }
+.restaurant .badge.status-preparing { background:#e5ecf6; color:#2f4f7a; }
+.restaurant .badge.status-ready { background:#e1efe2; color:#2c6b3f; }
+.restaurant .badge.status-cancelled { background:#f3e0d7; color:#8b432c; }
+
+/* Editing an order from the back office. */
+.restaurant .order-main { display:flex; flex-direction:column; gap:22px; min-width:0; }
+.restaurant .order-main .panel { margin:0; }
+.restaurant .order-main .cart-row form { margin:0; }
+.restaurant .danger-link { color:#8b2d1c; margin:0; }
+.restaurant .order-add-item { margin-top:18px; padding-top:16px; border-top:1px dashed var(--line); }
+.restaurant .order-add-item .eyebrow { margin-bottom:8px; }
+.restaurant .order-add-item select { flex:1 1 240px; margin:0; }
+.restaurant .order-reschedule .inline-form select { flex:1 1 200px; margin:0; }
+.restaurant .slot-option.current-slot { border-style:dashed; }

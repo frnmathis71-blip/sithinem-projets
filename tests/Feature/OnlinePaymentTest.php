@@ -89,7 +89,7 @@ test('the signed webhook confirms the payment and sends the order to the kitchen
 
     stripeWebhook($this, $event)->assertOk();
     stripeWebhook($this, $event)->assertOk();
-    expect($order->fresh())->status->toBe('preparing')->paid_at->not->toBeNull()
+    expect($order->fresh())->status->toBe('received')->paid_at->not->toBeNull()
         ->and(DB::table('notification_outbox')->where('order_id', $order->id)->count())->toBe(1);
 });
 
@@ -104,7 +104,7 @@ test('coming back from Stripe confirms the payment without waiting for the webho
     $order = onlineOrder($this);
     $this->get(route('orders.show', $order).'?paiement=confirme&session_id=cs_test_1')->assertOk()->assertSee('Paiement reçu');
 
-    expect($order->fresh()->status)->toBe('preparing');
+    expect($order->fresh()->status)->toBe('received');
 });
 
 test('an expired or abandoned payment cancels the order and frees the slot', function () {

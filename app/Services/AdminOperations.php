@@ -31,7 +31,7 @@ class AdminOperations
         $scope = $request->string('view', 'active')->toString() ?: 'active';
         $query = Order::query()->with(['slot', 'items'])->whereHas('slot', fn (Builder $q) => $q->whereDate('date', $date));
         if ($scope === 'active') {
-            $query->where('status', 'preparing');
+            $query->whereIn('status', Order::ACTIVE);
         } elseif ($scope === 'history') {
             $query->whereIn('status', ['completed', 'cancelled']);
         }
@@ -59,7 +59,7 @@ class AdminOperations
             $order->refresh();
             abort_if($order->status === 'cancelled', 422, 'Une commande annulée ne peut pas être encaissée.');
             if (! $order->paid_at) {
-                $order->update(['paid_at' => now()]);
+                $order->update(['paid_at' => now(), 'paid_amount' => $order->total]);
             }
         });
     }

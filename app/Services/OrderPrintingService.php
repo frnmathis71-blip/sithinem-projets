@@ -56,13 +56,13 @@ class OrderPrintingService
             // Retain uncertain deliveries for explicit review, never print them twice automatically.
             DB::table('order_print_jobs')->where('status', 'printing')->where('claimed_at', '<', now()->subMinutes(5))
                 ->update(['status' => 'uncertain', 'error' => 'Le poste n’a pas confirmé l’envoi. Vérifiez l’imprimante avant de relancer.', 'updated_at' => now()]);
-            foreach ($this->today()->where('status', 'preparing')->get() as $order) {
+            foreach ($this->today()->whereIn('status', Order::ACTIVE)->get() as $order) {
                 $this->enqueue($order, 'auto:'.$order->id, true);
             }
             while ($job = DB::table('order_print_jobs')->where('status', 'pending')->orderBy('id')->first()) {
                 $order = Order::query()->with(['slot', 'items'])->whereKey($job->order_id)->firstOrFail();
                 $today = CarbonImmutable::now(RestaurantSetting::query()->findOrFail(1)->timezone)->format('Y-m-d');
-                if ($order->slot->date->format('Y-m-d') !== $today || ($job->automatic && $order->status !== 'preparing')) {
+                if ($order->slot->date->format('Y-m-d') !== $today || ($job->automatic && ! $order->isActive())) {
                     DB::table('order_print_jobs')->where('id', $job->id)->update(['status' => 'skipped', 'updated_at' => now()]);
 
                     continue;

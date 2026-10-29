@@ -12,6 +12,7 @@ use App\Models\TimeSlot;
 use App\Services\AdminOperations;
 use App\Services\CatalogService;
 use App\Services\OrderPrintingService;
+use App\Services\OrderService;
 use App\Services\SlotService;
 use App\Services\StatisticsService;
 use Carbon\CarbonImmutable;
@@ -31,7 +32,7 @@ class AdminController extends Controller
         }
         $settings = RestaurantSetting::query()->findOrFail(1);
 
-        return view('restaurant.admin.dashboard', ['report' => $statistics->report($settings->timezone), 'orders' => Order::query()->with('slot')->where('status', 'preparing')->whereHas('slot', fn (Builder $q) => $q->whereDate('date', now($settings->timezone)->format('Y-m-d')))->get(), 'pushConfigured' => (bool) config('restaurant.vapid.public_key'), 'failedNotifications' => DB::table('notification_outbox')->whereNull('sent_at')->whereNotNull('last_error')->count()]);
+        return view('restaurant.admin.dashboard', ['report' => $statistics->report($settings->timezone), 'orders' => Order::query()->with('slot')->whereIn('status', Order::ACTIVE)->whereHas('slot', fn (Builder $q) => $q->whereDate('date', now($settings->timezone)->format('Y-m-d')))->get(), 'pushConfigured' => (bool) config('restaurant.vapid.public_key'), 'failedNotifications' => DB::table('notification_outbox')->whereNull('sent_at')->whereNotNull('last_error')->count()]);
     }
 
     public function orderFeed(Request $request): JsonResponse
@@ -42,7 +43,7 @@ class AdminController extends Controller
         $day = CarbonImmutable::parse($board['date']);
         $day->locale('fr');
 
-        return response()->json(['preparing' => $orders->where('status', 'preparing')->count(), 'date' => $board['date'], 'date_label' => $day->translatedFormat('l j F Y'), 'html' => $html, 'signature' => hash('sha256', $html)])->header('Cache-Control', 'no-store');
+        return response()->json(['preparing' => $orders->whereIn('status', Order::ACTIVE)->count(), 'date' => $board['date'], 'date_label' => $day->translatedFormat('l j F Y'), 'html' => $html, 'signature' => hash('sha256', $html)])->header('Cache-Control', 'no-store');
     }
 
     public function orders(Request $request): View
@@ -66,7 +67,30 @@ class AdminController extends Controller
     {
         $status = app(AdminOperations::class)->changeStatus($request, $order);
 
-        return redirect()->route('admin.orders', ['date' => $order->slot->date->format('Y-m-d')])->with('success', $status === 'completed' ? 'Commande terminée et déplacée dans l’historique.' : 'Commande mise à jour.');
+        return back()->with('success', $status === 'completed' ? 'Commande terminée et déplacée dans l’historique.' : 'Commande passée à « '.Order::STATUSES[$status].' ».');
+    }
+
+    public function addItem(Request $request, Order $order): RedirectResponse
+    {
+        $data = $request->validate(['item' => 'required|string', 'quantity' => 'required|integer|min:1|max:50']);
+        app(OrderService::class)->addItem($order, $request->user(), $data['item'], (int) $data['quantity']);
+
+        return back()->with('success', 'Article ajouté. Nouveau total : '.number_format($order->fresh()->total / 100, 2, ',', ' ').' €.');
+    }
+
+    public function removeItem(Request $request, Order $order, int $item): RedirectResponse
+    {
+        app(OrderService::class)->removeItem($order, $request->user(), $item);
+
+        return back()->with('success', 'Article retiré. Nouveau total : '.number_format($order->fresh()->total / 100, 2, ',', ' ').' €.');
+    }
+
+    public function reschedule(Request $request, Order $order): RedirectResponse
+    {
+        $data = $request->validate(['slot_id' => 'required|integer|exists:time_slots,id']);
+        $changed = app(OrderService::class)->reschedule($order, $request->user(), (int) $data['slot_id']);
+
+        return redirect()->route('admin.orders.show', $order)->with('success', $changed ? 'Heure de retrait modifiée. Le client est prévenu.' : 'La commande était déjà sur ce créneau.');
     }
 
     public function paid(Order $order): RedirectResponse

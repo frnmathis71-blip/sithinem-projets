@@ -22,6 +22,12 @@ return [
         'verify_service_sid' => env('TWILIO_VERIFY_SERVICE_SID'),
     ],
 
+    // Text messages to customers (pickup time changed). Off until SMS_ENABLED=true with a Twilio sender number.
+    'sms' => [
+        'enabled' => (bool) env('SMS_ENABLED', false),
+        'from' => env('TWILIO_SMS_FROM'),
+    ],
+
     // Online payment with Stripe Checkout. Off until STRIPE_ENABLED=true and both keys are set.
     'stripe' => [
         'enabled' => (bool) env('STRIPE_ENABLED', false),

@@ -259,7 +259,53 @@ class StoreController extends Controller
             }
         }
 
-        return view('restaurant.order', ['order' => $order->load(['slot', 'items']), 'histories' => DB::table('order_status_histories')->where('order_id', $order->id)->orderBy('id')->get()]);
+        $editing = $request->routeIs('admin.*') && $order->isActive() ? $this->editingData($request, $order) : [];
+
+        return view('restaurant.order', ['order' => $order->load(['slot', 'items']), 'histories' => DB::table('order_status_histories')->where('order_id', $order->id)->orderBy('id')->get(), ...$editing]);
+    }
+
+    /** Current status for the customer's order page, which refreshes itself when the restaurant moves the order along. */
+    public function tracking(Request $request, Order $order): JsonResponse
+    {
+        abort_unless($order->user_id === $request->user()?->id, 403);
+
+        return response()->json(['status' => $order->status, 'signature' => md5($order->status.'|'.$order->time_slot_id.'|'.$order->total.'|'.$order->paid_at)])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * What the restaurant can add to an order, and the slots it can move it to.
+     *
+     * @return array<string, mixed>
+     */
+    private function editingData(Request $request, Order $order): array
+    {
+        $catalog = app(CatalogService::class);
+        $choices = [];
+        foreach (Product::query()->where('available', true)->where('offer_only', false)->where('has_variants', false)->with('parent')->orderBy('name')->orderBy('variant_label')->get() as $product) {
+            if ($catalog->productAvailable($product)) {
+                $choices[] = ['key' => 'product:'.$product->id, 'label' => $product->displayName().' · '.number_format($product->price / 100, 2, ',', ' ').' €'];
+            }
+        }
+        foreach ($this->currentOffers($catalog) as $offer) {
+            $choices[] = ['key' => 'offer:'.$offer->id, 'label' => 'Offre : '.$offer->name.' · '.number_format($offer->price / 100, 2, ',', ' ').' €'];
+        }
+        $settings = RestaurantSetting::query()->findOrFail(1);
+        $slots = app(SlotService::class);
+        $dates = $slots->bookingDates($settings);
+        $current = $order->slot->date->format('Y-m-d');
+        if (! in_array($current, array_column($dates, 'date'), true)) {
+            array_unshift($dates, ['date' => $current, 'label' => $order->slot->date->translatedFormat('l j F')]);
+        }
+        $date = in_array($request->query('jour'), array_column($dates, 'date'), true) ? (string) $request->query('jour') : $current;
+        $now = CarbonImmutable::now($settings->timezone);
+
+        return [
+            'addChoices' => $choices,
+            'rescheduleDates' => $dates,
+            'rescheduleDate' => $date,
+            // Every slot still to come; the restaurant may go beyond the online capacity, the remaining amount is shown.
+            'rescheduleSlots' => array_values(array_filter($slots->forDate($date), fn (array $slot) => ! $slot['manually_closed'] && CarbonImmutable::parse($date.' '.$slot['start'], $settings->timezone)->gt($now))),
+        ];
     }
 
     public function account(): View

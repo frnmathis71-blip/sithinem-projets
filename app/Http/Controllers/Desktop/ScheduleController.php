@@ -84,7 +84,7 @@ class ScheduleController extends Controller
     {
         $settings = RestaurantSetting::query()->findOrFail(1);
         $today = now($settings->timezone)->format('Y-m-d');
-        $waiting = Order::query()->with(['slot', 'items'])->where('status', 'preparing')->whereHas('slot', fn (Builder $q) => $q->whereDate('date', $today))->get()
+        $waiting = Order::query()->with(['slot', 'items'])->whereIn('status', Order::ACTIVE)->whereHas('slot', fn (Builder $q) => $q->whereDate('date', $today))->get()
             ->sortBy(fn (Order $order) => $order->slot->starts_at)->map(fn (Order $order) => DesktopPresenter::order($order))->values();
 
         return response()->json(['report' => $statistics->report($settings->timezone), 'waiting' => $waiting,

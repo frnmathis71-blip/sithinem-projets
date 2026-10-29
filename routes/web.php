@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/commandes', [StoreController::class, 'place'])->block()->middleware('throttle:20,1')->name('orders.store');
     Route::get('/mes-commandes', [StoreController::class, 'orders'])->name('orders.index');
     Route::get('/mes-commandes/{order}', [StoreController::class, 'show'])->name('orders.show');
+    Route::get('/mes-commandes/{order}/suivi', [StoreController::class, 'tracking'])->middleware('throttle:60,1')->name('orders.tracking');
     Route::post('/mes-commandes/{order}/paiement', [StoreController::class, 'pay'])->block()->middleware('throttle:20,1')->name('orders.pay');
     Route::get('/mon-compte', [StoreController::class, 'account'])->name('account');
     Route::patch('/mon-compte', [StoreController::class, 'saveAccount'])->name('account.update');
@@ -61,6 +62,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', RequireAdmin::class]
     Route::get('/commandes/{order}/ticket', [OrderPrintController::class, 'show'])->name('orders.ticket');
     Route::get('/commandes/{order}', [StoreController::class, 'show'])->name('orders.show');
     Route::patch('/commandes/{order}/statut', [AdminController::class, 'status'])->name('orders.status');
+    Route::post('/commandes/{order}/articles', [AdminController::class, 'addItem'])->name('orders.items.add');
+    Route::delete('/commandes/{order}/articles/{item}', [AdminController::class, 'removeItem'])->whereNumber('item')->name('orders.items.remove');
+    Route::patch('/commandes/{order}/retrait', [AdminController::class, 'reschedule'])->name('orders.reschedule');
     Route::post('/commandes/{order}/encaissement', [AdminController::class, 'paid'])->name('orders.paid');
     Route::get('/creneaux', [AdminController::class, 'slots'])->name('slots');
     Route::patch('/creneaux/{slot}', [AdminController::class, 'saveSlot'])->name('slots.update');

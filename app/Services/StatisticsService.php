@@ -35,7 +35,7 @@ class StatisticsService
             $chart[] = ['label' => $day->format('d/m'), ...$this->totals($this->query($day, $day->endOfDay()))];
         }
 
-        return ['periods' => $periods, 'chart' => $chart, 'units' => $units, 'pending' => (clone $today)->where('status', 'preparing')->count(), 'completed' => (clone $today)->where('status', 'completed')->count(), 'cash' => (int) Order::query()->whereBetween('paid_at', [$now->startOfDay()->utc(), $now->endOfDay()->utc()])->sum('total')];
+        return ['periods' => $periods, 'chart' => $chart, 'units' => $units, 'pending' => (clone $today)->whereIn('status', Order::ACTIVE)->count(), 'completed' => (clone $today)->where('status', 'completed')->count(), 'cash' => (int) Order::query()->whereBetween('paid_at', [$now->startOfDay()->utc(), $now->endOfDay()->utc()])->sum('total')];
     }
 
     /**

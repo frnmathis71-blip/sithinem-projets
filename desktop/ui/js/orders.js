@@ -22,7 +22,9 @@ async function openOrder(id, onChange) {
   }
   function render(order) {
     const actions = [];
-    if (order.status === 'preparing') actions.push(h('button', { class: 'button primary', type: 'button', onclick: (event) => action(event.currentTarget, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'completed' } }, 'Commande terminée.') }, icon('check'), 'Terminée'));
+    // Next step of the order: received, accepted, ready, completed.
+    const next = { received: ['preparing', 'Accepter la commande', 'Commande acceptée.'], preparing: ['ready', 'Marquer comme prête', 'Commande prête.'], ready: ['completed', 'Terminée', 'Commande terminée.'] }[order.status];
+    if (next) actions.push(h('button', { class: 'button primary', type: 'button', onclick: (event) => action(event.currentTarget, 'PATCH', '/orders/' + order.id + '/status', { json: { status: next[0] } }, next[2]) }, icon('check'), next[1]));
     if (!order.paid && order.status !== 'cancelled') actions.push(h('button', { class: 'button', type: 'button', onclick: (event) => action(event.currentTarget, 'POST', '/orders/' + order.id + '/paid', undefined, 'Encaissement enregistré.') }, 'Encaisser ' + money(order.total)));
     actions.push(h('button', { class: 'button', type: 'button', onclick: (event) => printTicket(order, event.currentTarget) }, icon('printer'), 'Imprimer le ticket'));
     fill(body, 
@@ -36,8 +38,8 @@ async function openOrder(id, onChange) {
       h('div', { class: 'actions' }, actions),
       order.history ? h('section', {}, h('h4', { text: 'Suivi' }), h('ol', { class: 'timeline' }, order.history.map((step) => h('li', {}, h('strong', { text: step.label }), h('span', { text: step.at }))))) : null,
       h('div', { class: 'danger-zone' },
-        order.status === 'preparing' ? h('button', { class: 'link danger', type: 'button', onclick: async (event) => { if (await confirmBox('Annuler la commande #' + order.id + ' de ' + order.customer_name + ' ? Le montant du créneau sera libéré.', 'Annuler la commande', true)) action(event.target, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'cancelled' } }, 'Commande annulée.'); } }, 'Annuler la commande') : null,
-        order.status === 'cancelled' ? h('button', { class: 'link', type: 'button', onclick: (event) => action(event.target, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'preparing' } }, 'Commande remise en préparation.') }, 'Remettre en préparation') : null,
+        ['received', 'preparing', 'ready'].includes(order.status) ? h('button', { class: 'link danger', type: 'button', onclick: async (event) => { if (await confirmBox('Annuler la commande #' + order.id + ' de ' + order.customer_name + ' ? Le montant du créneau sera libéré.', 'Annuler la commande', true)) action(event.target, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'cancelled' } }, 'Commande annulée.'); } }, 'Annuler la commande') : null,
+        order.status === 'cancelled' ? h('button', { class: 'link', type: 'button', onclick: (event) => action(event.target, 'PATCH', '/orders/' + order.id + '/status', { json: { status: 'received' } }, 'Commande rétablie.') }, 'Rétablir la commande') : null,
         h('button', { class: 'link', type: 'button', onclick: async (event) => { const ticket = await busy(event.target, () => api('GET', '/orders/' + order.id + '/ticket')); if (ticket) body.append(h('pre', { class: 'ticket', text: ticket.text })); } }, 'Aperçu du ticket')));
   }
   try { render((await api('GET', '/orders/' + id)).order); }

@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $total
  * @property CarbonImmutable|null $paid_at
  * @property string $payment_method
+ * @property int|null $paid_amount
  * @property string|null $stripe_session_id
  * @property CarbonImmutable $created_at
  * @property-read TimeSlot $slot
@@ -25,12 +26,42 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Order extends Model
 {
-    /** An online order waits for its Stripe payment before reaching the kitchen; it keeps its slot meanwhile. */
-    public const STATUSES = ['awaiting_payment' => 'Paiement en attente', 'preparing' => 'En préparation', 'completed' => 'Terminée', 'cancelled' => 'Annulée'];
+    /**
+     * An online order waits for its Stripe payment before reaching the kitchen; it keeps its slot meanwhile.
+     * Then the restaurant moves it along: received, accepted ("preparing", the value older orders already use), ready, completed.
+     */
+    public const STATUSES = ['awaiting_payment' => 'Paiement en attente', 'received' => 'Reçue', 'preparing' => 'Acceptée', 'ready' => 'Prête', 'completed' => 'Terminée', 'cancelled' => 'Annulée'];
+
+    /** Orders the kitchen still has to handle: on the board, printed automatically, editable. */
+    public const ACTIVE = ['received', 'preparing', 'ready'];
+
+    /** Steps shown to the customer, with what each one means for them. */
+    public const TRACKING = [
+        'received' => 'Le restaurant a bien reçu votre commande.',
+        'preparing' => 'Votre commande est acceptée : elle sera préparée pour votre heure de retrait.',
+        'ready' => 'Votre commande est prête : vous pouvez venir la retirer.',
+        'completed' => 'Commande retirée. Bon appétit !',
+    ];
+
+    /** Where the restaurant may move an order from each status. */
+    public const TRANSITIONS = [
+        'awaiting_payment' => ['cancelled'],
+        'received' => ['preparing', 'ready', 'completed', 'cancelled'],
+        'preparing' => ['received', 'ready', 'completed', 'cancelled'],
+        'ready' => ['preparing', 'completed', 'cancelled'],
+        'completed' => ['ready'],
+        'cancelled' => ['received'],
+    ];
+
+    public function isActive(): bool
+    {
+        return in_array($this->status, self::ACTIVE, true);
+    }
 
     public const PAYMENT_METHODS = ['onsite' => 'Sur place au retrait', 'online' => 'En ligne'];
 
-    public const HISTORY_LABELS = ['new' => 'Nouvelle', 'confirmed' => 'Confirmée', 'ready' => 'Prête', 'collected' => 'Retirée', ...self::STATUSES];
+    /** Older status names, current ones, and the changes the restaurant made to an order. */
+    public const HISTORY_LABELS = ['new' => 'Nouvelle', 'confirmed' => 'Confirmée', 'collected' => 'Retirée', ...self::STATUSES, 'rescheduled' => 'Heure de retrait modifiée', 'edited' => 'Articles modifiés par le restaurant'];
 
     public function accent(): string
     {
@@ -42,7 +73,7 @@ class Order extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['total' => 'integer', 'paid_at' => 'immutable_datetime'];
+        return ['total' => 'integer', 'paid_amount' => 'integer', 'paid_at' => 'immutable_datetime'];
     }
 
     /** @return BelongsTo<TimeSlot, $this> */

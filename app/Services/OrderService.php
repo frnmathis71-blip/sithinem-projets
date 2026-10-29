@@ -61,14 +61,14 @@ class OrderService
             if ($expectedTotal !== null && $expectedTotal !== $quote['total']) {
                 throw ValidationException::withMessages(['cart' => 'Le tarif a changé. Consultez votre panier avant de confirmer à nouveau.']);
             }
-            $order = Order::query()->create(['number' => 'SN-'.strtoupper((string) Str::ulid()), 'user_id' => $user->id, 'time_slot_id' => $slot->id, 'customer_name' => $customerName ?? trim($user->first_name.' '.$user->name), 'source' => $source, 'phone' => $phone, 'total' => $quote['total'], 'status' => $status = $paymentMethod === 'online' ? 'awaiting_payment' : 'preparing', 'payment_method' => $paymentMethod, 'idempotency_key' => $key]);
+            $order = Order::query()->create(['number' => 'SN-'.strtoupper((string) Str::ulid()), 'user_id' => $user->id, 'time_slot_id' => $slot->id, 'customer_name' => $customerName ?? trim($user->first_name.' '.$user->name), 'source' => $source, 'phone' => $phone, 'total' => $quote['total'], 'status' => $status = $paymentMethod === 'online' ? 'awaiting_payment' : 'received', 'payment_method' => $paymentMethod, 'idempotency_key' => $key]);
             $order->update(['customer_message' => $customerMessage === '' ? null : $customerMessage]);
             $order->items()->createMany($quote['lines']);
             if ($source === 'online' && $user->phone !== $phone) {
                 $user->forceFill(['phone' => $phone, 'phone_verified_at' => null, 'pending_phone' => null])->save();
             }
             $this->history($order, $user, null, $status);
-            if ($status === 'preparing') {
+            if ($status === 'received') {
                 $this->notifyKitchen($order);
             }
 
@@ -89,15 +89,15 @@ class OrderService
 
                 return;
             }
-            $order->update(['paid_at' => now()]);
+            $order->update(['paid_at' => now(), 'paid_amount' => $amount]);
             if ($order->status !== 'awaiting_payment') {
                 // Paid after the order was cancelled (late payment): kept visible so the restaurant can refund it.
                 logger()->warning('Stripe payment received for an order that no longer awaits payment.', ['order' => $order->number, 'status' => $order->status]);
 
                 return;
             }
-            $this->history($order, $order->user, 'awaiting_payment', 'preparing');
-            $order->update(['status' => 'preparing']);
+            $this->history($order, $order->user, 'awaiting_payment', 'received');
+            $order->update(['status' => 'received']);
             $this->notifyKitchen($order);
         });
     }
@@ -128,16 +128,90 @@ class OrderService
         });
     }
 
+    /** The restaurant adds a dish or an offer to an order still in progress; the total follows. */
+    public function addItem(Order $order, User $actor, string $key, int $quantity): void
+    {
+        abort_unless($actor->role === 'admin', 403);
+        Validator::make(['item' => $key, 'quantity' => $quantity], ['item' => ['required', 'regex:/^(product|offer):\d+$/'], 'quantity' => 'required|integer|min:1|max:50'])->validate();
+        app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($order, $actor, $key, $quantity) {
+            $order = $this->editable($order);
+            $pickup = CarbonImmutable::parse($order->slot->date->format('Y-m-d').' '.$order->slot->starts_at, $settings->timezone);
+            try {
+                $line = app(CatalogService::class)->quote([$key => $quantity], $pickup)['lines'][0];
+            } catch (ValidationException) {
+                throw ValidationException::withMessages(['item' => 'Cet article n’est pas disponible pour l’heure de retrait de la commande.']);
+            }
+            $same = $order->items()->where('item_type', $line['item_type'])->where('item_id', $line['item_id'])->where('unit_price', $line['unit_price'])->first();
+            $same ? $same->increment('quantity', $quantity) : $order->items()->create($line);
+            $this->edited($order, $actor);
+        });
+    }
+
+    /** The restaurant removes a line; an order keeps at least one line (cancel it instead). */
+    public function removeItem(Order $order, User $actor, int $itemId): void
+    {
+        abort_unless($actor->role === 'admin', 403);
+        app(RestaurantLock::class)->run(function () use ($order, $actor, $itemId) {
+            $order = $this->editable($order);
+            $item = $order->items()->findOrFail($itemId);
+            if ($order->items()->count() === 1) {
+                throw ValidationException::withMessages(['item' => 'C’est le dernier article : annulez plutôt la commande.']);
+            }
+            $item->delete();
+            $this->edited($order, $actor);
+        });
+    }
+
+    /** Moves the pickup to another slot, then tells the customer by email and, when SMS is set up, by text message. */
+    public function reschedule(Order $order, User $actor, int $slotId): bool
+    {
+        abort_unless($actor->role === 'admin', 403);
+
+        return app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($order, $actor, $slotId) {
+            $order = $this->editable($order);
+            $slot = TimeSlot::query()->lockForUpdate()->findOrFail($slotId);
+            if ($slot->id === $order->time_slot_id) {
+                return false;
+            }
+            $start = CarbonImmutable::parse($slot->date->format('Y-m-d').' '.$slot->starts_at, $settings->timezone);
+            if ($start->isPast()) {
+                throw ValidationException::withMessages(['slot_id' => 'Choisissez un créneau à venir.']);
+            }
+            $previous = $order->slot;
+            $order->update(['time_slot_id' => $slot->id]);
+            $this->history($order, $actor, $order->status, 'rescheduled');
+            $order->setRelation('slot', $slot);
+            DB::afterCommit(fn () => app(CustomerNotifier::class)->pickupChanged($order, $previous));
+
+            return true;
+        });
+    }
+
+    private function editable(Order $order): Order
+    {
+        $order = Order::query()->with('slot')->lockForUpdate()->findOrFail($order->id);
+        if (! $order->isActive()) {
+            throw ValidationException::withMessages(['order' => 'Seule une commande en cours (reçue, acceptée ou prête) peut être modifiée.']);
+        }
+
+        return $order;
+    }
+
+    private function edited(Order $order, User $actor): void
+    {
+        $order->update(['total' => (int) $order->items()->sum(DB::raw('quantity * unit_price'))]);
+        $this->history($order, $actor, $order->status, 'edited');
+    }
+
     public function changeStatus(Order $order, User $actor, string $status): void
     {
         abort_unless($actor->role === 'admin', 403);
         app(RestaurantLock::class)->run(function (RestaurantSetting $settings) use ($order, $actor, $status) {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
-            $transitions = ['awaiting_payment' => ['cancelled'], 'preparing' => ['completed', 'cancelled'], 'completed' => [], 'cancelled' => ['preparing']];
             if ($status === $order->status) {
                 return;
             }
-            if (! in_array($status, $transitions[$order->status] ?? [], true)) {
+            if (! in_array($status, Order::TRANSITIONS[$order->status] ?? [], true)) {
                 throw ValidationException::withMessages(['status' => 'Ce changement de statut n’est pas autorisé.']);
             }
             if ($order->status === 'cancelled') {

@@ -46,7 +46,7 @@ class OrderController extends Controller
         return response()->json([
             'latest_id' => (int) Order::query()->max('id'),
             'orders' => $orders->map(fn (Order $order) => DesktopPresenter::order($order))->values()->all(),
-            'preparing_today' => Order::query()->where('status', 'preparing')->whereHas('slot', fn ($q) => $q->whereDate('date', CarbonImmutable::now($timezone)->format('Y-m-d')))->count(),
+            'preparing_today' => Order::query()->whereIn('status', Order::ACTIVE)->whereHas('slot', fn ($q) => $q->whereDate('date', CarbonImmutable::now($timezone)->format('Y-m-d')))->count(),
         ]);
     }
 

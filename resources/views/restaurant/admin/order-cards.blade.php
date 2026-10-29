@@ -20,4 +20,4 @@
 </ul>
 <div class="total-row"><strong>{{ number_format($order->total / 100, 2, ',', ' ') }} €</strong><span>Voir le détail →</span></div>
 </a>
-@empty<div class="panel board-empty"><h2>{{ $scope === 'active' ? 'Tout est à jour' : 'Aucune commande' }}</h2><p>{{ $scope === 'active' ? 'Aucune commande en préparation pour cette journée.' : 'Aucune commande dans cette vue pour cette journée.' }}</p></div>@endforelse
+@empty<div class="panel board-empty"><h2>{{ $scope === 'active' ? 'Tout est à jour' : 'Aucune commande' }}</h2><p>{{ $scope === 'active' ? 'Aucune commande en cours pour cette journée.' : 'Aucune commande dans cette vue pour cette journée.' }}</p></div>@endforelse

@@ -205,7 +205,7 @@ test('lowering capacity preserves eight existing orders and blocks the ninth', f
         restaurantPlace($this);
     }
     $this->actingAs($this->admin)->patch(route('admin.slots.update', $this->slot), ['amount_capacity_override' => 5, 'manually_closed' => 0])->assertSessionHasNoErrors();
-    expect(Order::where('status', 'preparing')->count())->toBe(8);
+    expect(Order::where('status', 'received')->count())->toBe(8);
     $description = app(SlotService::class)->describe($this->slot->fresh(), RestaurantSetting::find(1));
     expect($description['remaining'])->toBe(0)->and($description['count'])->toBe(8);
     expect(fn () => restaurantPlace($this))->toThrow(ValidationException::class);
@@ -266,7 +266,7 @@ test('cancellation releases capacity and reactivation cannot overbook', function
     $order = restaurantPlace($this);
     app(OrderService::class)->changeStatus($order, $this->admin, 'cancelled');
     restaurantPlace($this);
-    expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, 'preparing'))->toThrow(ValidationException::class);
+    expect(fn () => app(OrderService::class)->changeStatus($order, $this->admin, 'received'))->toThrow(ValidationException::class);
     expect($order->fresh()->status)->toBe('cancelled');
 });
 

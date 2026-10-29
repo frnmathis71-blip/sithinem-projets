@@ -136,7 +136,7 @@ function empty(title, text, action) { return h('div', { class: 'empty' }, h('h3'
 function loading() { return h('div', { class: 'loading', role: 'status' }, h('span', { class: 'spinner' }), 'Chargement…'); }
 function failure(error, retry) { return h('div', { class: 'empty error' }, h('h3', { text: 'Impossible de charger cet écran' }), h('p', { text: error.message }), h('button', { class: 'button', type: 'button', onclick: retry }, 'Réessayer')); }
 function thumb(src, name, size = '') { return src ? h('img', { class: 'thumb ' + size, src, alt: '', loading: 'lazy' }) : h('span', { class: 'thumb placeholder ' + size, 'aria-hidden': 'true', text: (name || '?').trim().charAt(0).toUpperCase() }); }
-function statusKind(status) { return { preparing: 'warn', completed: 'ok', cancelled: 'muted' }[status] || ''; }
+function statusKind(status) { return { awaiting_payment: 'muted', received: 'warn', preparing: 'warn', ready: 'ok', completed: 'ok', cancelled: 'muted' }[status] || ''; }
 
 // A view module renders into the main area: { title, render(main, params) }.
 function registerView(id, view) { App.views[id] = view; }

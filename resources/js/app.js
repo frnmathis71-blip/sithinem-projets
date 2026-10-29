@@ -114,7 +114,7 @@ if (feed) {
                     chime().catch(() => disableSound('Cliquez sur « Activer le son » pour réactiver les alertes.'));
                 }
             }
-            feed.querySelector('[data-feed-message]').textContent = `${data.preparing} commande${data.preparing > 1 ? 's' : ''} en préparation. Actualisation automatique toutes les 3 secondes.`;
+            feed.querySelector('[data-feed-message]').textContent = `${data.preparing} commande${data.preparing > 1 ? 's' : ''} en cours. Actualisation automatique toutes les 3 secondes.`;
             const dateLabel = document.querySelector('[data-board-date]');
             if (dateLabel) dateLabel.textContent = data.date_label;
         } catch { feed.querySelector('[data-feed-message]').textContent = 'Connexion interrompue. Nouvelle tentative automatique…'; }
@@ -300,4 +300,26 @@ if (document.querySelector('#carte') && location.pathname !== '/') {
     window.addEventListener('popstate', () => {
         if (location.href.split('#')[0] !== shownUrl) switchCatalog(location.href, false);
     });
+}
+
+// Admin forms that change an order (add or remove an article, move the pickup) ask for a confirmation first.
+document.addEventListener('submit', (event) => {
+    const message = event.target.dataset?.confirm;
+    if (message && !window.confirm(message)) event.preventDefault();
+}, true);
+
+// Customer order page: follows the order and reloads when the restaurant moves it along or changes it.
+const tracking = document.querySelector('[data-order-tracking]');
+if (tracking) {
+    const check = async () => {
+        if (document.hidden) return;
+        try {
+            const response = await fetch(tracking.dataset.orderTracking, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+            if (response.ok && (await response.json()).signature !== tracking.dataset.signature) location.reload();
+        } catch {
+            // Offline for a moment: the next check will catch up.
+        }
+    };
+    setInterval(check, 20000);
+    document.addEventListener('visibilitychange', check);
 }
