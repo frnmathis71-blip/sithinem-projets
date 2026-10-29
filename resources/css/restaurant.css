@@ -644,7 +644,7 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 }
 
 /* Home carousel: the slides share one grid cell and turn in 3D; only transform and opacity move. */
-.restaurant .hero-carousel { --arch:48% 48% 8px 8px; position:relative; min-width:0; }
+.restaurant .hero-carousel { --arch:20px; position:relative; min-width:0; }
 .restaurant .hero-slides { display:grid; perspective:1600px; }
 .restaurant .hero-slide { grid-area:1 / 1; min-width:0; opacity:0; backface-visibility:hidden; transition:transform 650ms var(--motion-ease), opacity 400ms ease-out; }
 .restaurant .hero-slide.is-active { opacity:1; transform:none; z-index:1; }
@@ -668,7 +668,7 @@ button.story-product:disabled { opacity: .45; cursor: not-allowed; }
 .restaurant .hero-carousel-dot[aria-current="true"]::before { width:22px; background:var(--ink); }
 .restaurant .hero-carousel-dot[aria-current="true"] { width:38px; }
 @media (max-width:800px) {
-    .restaurant .hero-carousel { --arch:140px 140px 8px 8px; margin-top:15px; }
+    .restaurant .hero-carousel { margin-top:15px; }
     .restaurant .hero-carousel .hero-art { margin-top:0; }
 }
 @media (max-width:480px) {
