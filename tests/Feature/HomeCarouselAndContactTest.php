@@ -7,7 +7,7 @@ use App\Models\RestaurantSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
-test('the home carousel shows current offers and chef dishes after the welcome illustration', function () {
+test('the home carousel shows current offers and chef dishes without the welcome illustration', function () {
     $nems = Product::create(['name' => 'Nems', 'price' => 650]);
     $offer = Offer::create(['name' => 'Duo du vendredi', 'price' => 1500, 'available' => true, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay()]);
     DB::table('offer_items')->insert(['offer_id' => $offer->id, 'product_id' => $nems->id, 'quantity' => 2]);
@@ -19,9 +19,10 @@ test('the home carousel shows current offers and chef dishes after the welcome i
 
     $this->get(route('home'))->assertOk()
         ->assertSee('data-hero-carousel', false)
-        ->assertSeeInOrder(['1 sur 3', 'Offre du moment', 'Duo du vendredi', '15,00 €', 'Plat du chef', 'Bo bun du chef', '14,00 €'])
+        ->assertSeeInOrder(['1 sur 2', 'Offre du moment', 'Duo du vendredi', '15,00 €', 'Plat du chef', 'Bo bun du chef', '14,00 €'])
         ->assertDontSee('Offre terminée')
-        ->assertDontSee('Curry épuisé');
+        ->assertDontSee('Curry épuisé')
+        ->assertDontSee('hero-art', false);
 });
 
 test('the home carousel stays a still illustration when there is nothing to feature', function () {

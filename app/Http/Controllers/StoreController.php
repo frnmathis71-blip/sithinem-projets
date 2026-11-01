@@ -109,7 +109,7 @@ class StoreController extends Controller
     }
 
     /**
-     * Current offers and chef dishes shown in the home carousel, after the welcome illustration.
+     * Current offers and chef dishes shown in the home carousel.
      *
      * @return list<array{label: string, days: string|null, name: string, price: string, image: string|null, url: string}>
      */

@@ -204,7 +204,7 @@ if (homeIntro) {
     window.addEventListener('resize', fit);
 }
 
-// Home carousel: turns every 5 seconds, pauses on hover, focus or hidden tab.
+// Home carousel: turns every 3 seconds, pauses on hover, focus or hidden tab.
 const carousel = document.querySelector('[data-hero-carousel]');
 if (carousel) {
     const slides = [...carousel.querySelectorAll('.hero-slide')];
@@ -236,7 +236,7 @@ if (carousel) {
     };
     const schedule = () => {
         clearInterval(timer);
-        timer = paused || held || document.hidden ? null : setInterval(() => show((active + 1) % slides.length), 5000);
+        timer = paused || held || document.hidden ? null : setInterval(() => show((active + 1) % slides.length), 3000);
     };
 
     dots.forEach((dot, i) => dot.addEventListener('click', () => {
